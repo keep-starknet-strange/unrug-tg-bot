@@ -60,6 +60,6 @@ function getBot(): any {
  * @returns `true` if the string is a valid StarkNet address, otherwise `false`.
  */
 function isValidStarknetAddress(address: string): boolean {
-  const regex = /^0x[0-9a-fA-F]{63,64}$/;
+  const regex = /^0x[0-9a-fA-F]{50,64}$/;
   return regex.test(address);
 }
