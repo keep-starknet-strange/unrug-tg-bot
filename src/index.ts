@@ -26,8 +26,27 @@ bot.onText(/\/unrug (.+)/, (msg: { chat: { id: any } }, match: any[]) => {
     bot.sendMessage(chatId, response);
   } else {
     console.log(
-      `The provided address is a valid Starknet address: ${tokenAddress}`,
+      `The provided address is a valid Starknet address: ${tokenAddress}`
     );
+    // TODO: Add the logic to check if the token is unruggable or not
+    // Mocking the response for now
+    const isUnruggable = true;
+    const tokenName = "Paint au lait";
+    const tokenSymbol = "PAL";
+    const teamAlloc = "0.2%";
+    const marketcap = "5M";
+
+    if (!isUnruggable) {
+      response = "This token is Ruggable ❌";
+    } else {
+      response =
+        "This token IS Unruggable ✅\n" +
+        `Token name: ${tokenName}\n` +
+        `Token symbol: ${tokenSymbol}\n` +
+        `Team alloc: ${teamAlloc}\n` +
+        `Marketcap: ${marketcap}`;
+    }
+    bot.sendMessage(chatId, response);
   }
 });
 
