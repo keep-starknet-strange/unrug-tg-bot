@@ -1,0 +1,14 @@
+{
+  "name": "unrug-tg-bot",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.65.1"
+  }
+}
