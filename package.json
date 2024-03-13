@@ -2,6 +2,9 @@
   "name": "unrug-tg-bot",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
   "devDependencies": {
     "bun-types": "latest"
   },
