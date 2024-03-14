@@ -36,7 +36,7 @@ bot.onText(/\/unrug (.+)/, (msg, match) => {
 
 async function computeResponse(chatId: number, tokenAddress: string): Promise<string> {
 
-  // Check if the provided address is a valid StarnNet address
+  // Check if the provided address is a valid StarkNet address
   if (!isValidStarknetAddress(tokenAddress)) {
     return `The provided address is a not valid Starknet address: ${tokenAddress}`
   } else {
