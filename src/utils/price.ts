@@ -1,7 +1,8 @@
-import { BlockNumber, BlockTag, uint256 } from 'starknet'
 import { Fraction, Percent } from '@uniswap/sdk-core'
-import { JEDISWAP_ETH_USDC, Selector } from './constants'
+import { BlockNumber, BlockTag, uint256 } from 'starknet'
+
 import { provider } from '../services/provider'
+import { JEDISWAP_ETH_USDC, Selector } from './constants'
 import { decimalsScale } from './helpers'
 
 export async function getEtherPrice(blockIdentifier: BlockNumber = BlockTag.latest) {

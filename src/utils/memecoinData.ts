@@ -1,16 +1,16 @@
 import {
   CallContractResponse,
   CallData,
-  RpcProvider,
   getChecksumAddress,
   hash,
   shortString,
   uint256,
 } from 'starknet'
-import { FACTORY_ADDRESS, LiquidityType, MULTICALL_ADDRESS, Selector } from './constants'
-import { Memecoin } from '../types'
-import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from './liquidity'
+
 import { provider } from '../services/provider'
+import { LiquidityType, Memecoin } from '../types'
+import { FACTORY_ADDRESS, MULTICALL_ADDRESS, Selector } from './constants'
+import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from './liquidity'
 
 export async function getTokenData(tokenAddress: string) {
   const isMemecoinCalldata = CallData.compile({

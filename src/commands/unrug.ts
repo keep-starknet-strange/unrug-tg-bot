@@ -1,14 +1,11 @@
 import { Percent } from '@uniswap/sdk-core'
+
+import { bot } from '../services/bot'
 import { isValidStarknetAddress } from '../utils/helpers'
+import { parseLiquidityParams } from '../utils/liquidity'
 import { getTokenData, parseTokenData } from '../utils/memecoinData'
 import { formatPercentage } from '../utils/price'
-import { bot } from '../services/bot'
-import { parseLiquidityParams } from '../utils/liquidity'
 
-/**
- * /unrug command
- * @param bot TelegramBot instance
- */
 // Matches "/unrug [token_address]"
 bot.onText(/\/unrug (.+)/, (msg, match) => {
   // TODO: add usage

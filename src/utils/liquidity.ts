@@ -1,16 +1,11 @@
 import { Fraction } from '@uniswap/sdk-core'
-import { EkuboMemecoin, JediswapMemecoin, LaunchedMemecoin } from '../types'
-import {
-  DECIMALS,
-  LIQUIDITY_LOCK_FOREVER_TIMESTAMP,
-  LiquidityType,
-  QUOTE_TOKENS,
-  Selector,
-} from './constants'
+
 import { provider } from '../services/provider'
-import { getEtherPrice } from './price'
-import { decimalsScale } from './helpers'
+import { EkuboMemecoin, JediswapMemecoin, LaunchedMemecoin, LiquidityType } from '../types'
+import { DECIMALS, LIQUIDITY_LOCK_FOREVER_TIMESTAMP, QUOTE_TOKENS, Selector } from './constants'
 import { getInitialPrice } from './ekubo'
+import { decimalsScale } from './helpers'
+import { getEtherPrice } from './price'
 
 export async function getJediswapLiquidityLockPosition(
   liquidity: Pick<JediswapMemecoin['liquidity'], 'lockPosition' | 'lockManager'>,
