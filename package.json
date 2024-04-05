@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.64.3",
+    "@types/qrcode": "^1.5.5",
     "@uniswap/eslint-config": "^1.2.0",
     "bun-types": "latest",
     "eslint": "^8.57.0",
@@ -21,7 +22,9 @@
   },
   "dependencies": {
     "@uniswap/sdk-core": "^4.2.0",
+    "@walletconnect/sign-client": "^2.12.1",
     "node-telegram-bot-api": "^0.65.1",
+    "qrcode": "^1.5.3",
     "starknet": "^5.24.3"
   }
 }
