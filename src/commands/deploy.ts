@@ -1,14 +1,95 @@
-import { CallData, stark, uint256 } from 'starknet'
-import dedent from 'ts-dedent'
+import { CallData, hash, stark, uint256 } from 'starknet'
+import { dedent } from 'ts-dedent'
 
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
 import { isValidL2Address } from '../utils/address'
-import { DECIMALS, FACTORY_ADDRESS, Selector } from '../utils/constants'
-import { formState } from '../utils/formState'
+import { DECIMALS, FACTORY_ADDRESS, Selector, TOKEN_CLASS_HASH } from '../utils/constants'
+import { deployForm, formState } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
 
+// TODO: use zod, yup or another validation library
+const validateName = (name: string | undefined, chatId: number): name is string => {
+  // TODO: min length?
+  if (!name || name.length < 2) {
+    bot.sendMessage(
+      chatId,
+      `The *Name* of the coin can't be shorter than 2 characters. Please provide a longer name.`,
+      { parse_mode: 'Markdown' },
+    )
+    return false
+  }
+
+  // TODO: max length?
+  if (name.length > 256) {
+    bot.sendMessage(
+      chatId,
+      `The *Name* of the coin can't be longer than 256 characters. Please provide a shorter name.`,
+      { parse_mode: 'Markdown' },
+    )
+    return false
+  }
+
+  return true
+}
+
+const validateSymbol = (symbol: string | undefined, chatId: number): symbol is string => {
+  // TODO: min length?
+  if (!symbol || symbol.length < 2) {
+    bot.sendMessage(
+      chatId,
+      `The *Symbol* of the coin can't be shorter than 2 characters. Please provide a longer symbol.`,
+      { parse_mode: 'Markdown' },
+    )
+    return false
+  }
+
+  // TODO: max length?
+  if (symbol.length > 256) {
+    bot.sendMessage(
+      chatId,
+      `The *Symbol* of the coin can't be longer than 256 characters. Please provide a shorter symbol.`,
+      { parse_mode: 'Markdown' },
+    )
+    return false
+  }
+
+  return true
+}
+
+const validateAddress = (address: string | undefined, chatId: number): address is string => {
+  if (!address || !isValidL2Address(address)) {
+    bot.sendMessage(
+      chatId,
+      `The *Owner Address* is invalid. Please provide a valid Starknet address.`,
+      { parse_mode: 'Markdown' },
+    )
+    return false
+  }
+
+  return true
+}
+
+const validateInitialSupply = (
+  initialSupply: number | undefined,
+  chatId: number,
+): initialSupply is number => {
+  if (initialSupply === undefined || isNaN(initialSupply) || initialSupply <= 0) {
+    bot.sendMessage(chatId, `The *Initial Supply* is invalid. Please provide a valid number.`, {
+      parse_mode: 'Markdown',
+    })
+    return false
+  }
+
+  return true
+}
+
 bot.onText(/\/deploy/, async (msg): Promise<void> => {
+  if (msg.chat.type !== 'private') {
+    bot.sendMessage(msg.chat.id, 'This command can only be used in a private chat.')
+    return
+  }
+
   formState.resetForm(msg.chat.id)
 
   await bot.sendMessage(
@@ -18,7 +99,7 @@ bot.onText(/\/deploy/, async (msg): Promise<void> => {
   )
 
   formState.setActiveForm(msg.chat.id, 'deploy')
-  formState.setActiveField(msg.chat.id, 'name')
+  deployForm.setActiveField(msg.chat.id, 'name')
 })
 
 bot.on('message', (msg) => {
@@ -30,103 +111,51 @@ bot.on('message', (msg) => {
   const activeField = form?.activeField
 
   if (activeField === 'name') {
-    // TODO: max length?
-    if (msg.text.length > 256) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Name* of the coin can't be longer than 256 characters. Please provide a shorter name.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    if (!validateName(msg.text, msg.chat.id)) return
 
-    // TODO: min length?
-    if (msg.text.length < 2) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Name* of the coin can't be shorter than 2 characters. Please provide a longer name.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    deployForm.setValue(msg.chat.id, 'name', msg.text)
+    deployForm.setActiveField(msg.chat.id, 'symbol')
 
-    formState.setValue(msg.chat.id, 'name', msg.text)
-
-    bot.sendMessage(msg.chat.id, `Great! Now please provide the *Symbol* of the coin.`, {
+    bot.sendMessage(msg.chat.id, `Please provide the *Symbol* of the coin.`, {
       parse_mode: 'Markdown',
     })
-
-    formState.setActiveField(msg.chat.id, 'symbol')
   }
 
   if (activeField === 'symbol') {
-    if (msg.text.length > 256) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Symbol* of the coin can't be longer than 256 characters. Please provide a shorter symbol.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    if (!validateSymbol(msg.text, msg.chat.id)) return
 
-    // TODO: min length?
-    if (msg.text.length < 2) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Symbol* of the coin can't be shorter than 2 characters. Please provide a longer symbol.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    deployForm.setValue(msg.chat.id, 'symbol', msg.text)
+    deployForm.setActiveField(msg.chat.id, 'ownerAddress')
 
-    formState.setValue(msg.chat.id, 'symbol', msg.text)
-
-    bot.sendMessage(msg.chat.id, `Great! Now please provide the *Owner Address* of the coin.`, {
+    bot.sendMessage(msg.chat.id, `Please provide the *Owner Address* of the coin.`, {
       parse_mode: 'Markdown',
     })
-
-    formState.setActiveField(msg.chat.id, 'ownerAddress')
   }
 
   if (activeField === 'ownerAddress') {
-    if (!isValidL2Address(msg.text)) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Owner Address* is invalid. Please provide a valid Starknet address.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    if (!validateAddress(msg.text, msg.chat.id)) return
 
-    formState.setValue(msg.chat.id, 'ownerAddress', msg.text)
+    deployForm.setValue(msg.chat.id, 'ownerAddress', msg.text)
+    deployForm.setActiveField(msg.chat.id, 'initialSupply')
 
-    bot.sendMessage(msg.chat.id, `Great! Now please provide the *Initial Supply* of the coin.`, {
+    bot.sendMessage(msg.chat.id, `Please provide the *Initial Supply* of the coin.`, {
       parse_mode: 'Markdown',
     })
-
-    formState.setActiveField(msg.chat.id, 'initialSupply')
   }
 
   if (activeField === 'initialSupply') {
     const value = parseInt(msg.text.replace(/[^0-9]/g, ''), 10)
-    if (isNaN(value) || value <= 0) {
-      bot.sendMessage(
-        msg.chat.id,
-        `The *Initial Supply* is invalid. Please provide a valid number.`,
-        { parse_mode: 'Markdown' },
-      )
-      return
-    }
+    if (!validateInitialSupply(value, msg.chat.id)) return
 
-    formState.setValue(msg.chat.id, 'initialSupply', value.toString())
-    formState.setActiveField(msg.chat.id, 'deploy')
+    deployForm.setValue(msg.chat.id, 'initialSupply', value)
+    deployForm.setActiveField(msg.chat.id, 'deploy')
 
-    const newForm = formState.getForm(msg.chat.id)
+    const newForm = deployForm.getForm(msg.chat.id)
 
     bot.sendMessage(
       msg.chat.id,
       dedent`
-        Great! Here's a summary of the data you've provided.
+        Here's a summary of the data you've provided.
         *Name*: ${newForm?.values.name}
         *Symbol*: ${newForm?.values.symbol}
         *Owner Address*: ${newForm?.values.ownerAddress}
@@ -150,10 +179,6 @@ bot.on('message', (msg) => {
         },
       },
     )
-
-    // connect wallet and deploy
-
-    console.log(formState.getForm(msg.chat.id))
   }
 })
 
@@ -161,19 +186,27 @@ bot.on('callback_query', (query) => {
   if (!query.data || !query.message || !query.data.startsWith('deploy_')) return
   const chatId = query.message.chat.id
 
-  const form = formState.getForm(chatId)
+  const form = deployForm.getForm(chatId)
 
   if (form?.activeForm !== 'deploy' || form.activeField !== 'deploy') return
 
   if (query.data === 'deploy_cancel') {
-    formState.resetForm(chatId)
+    deployForm.resetForm(chatId)
     bot.deleteMessage(chatId, query.message.message_id)
     bot.sendMessage(chatId, 'Deployment cancelled.')
   }
 
   if (query.data === 'deploy_confirm') {
-    formState.resetForm(chatId)
+    deployForm.resetForm(chatId)
     bot.deleteMessage(chatId, query.message.message_id)
+
+    if (
+      !validateName(form.values.name, chatId) ||
+      !validateSymbol(form.values.symbol, chatId) ||
+      !validateAddress(form.values.ownerAddress, chatId) ||
+      !validateInitialSupply(form.values.initialSupply, chatId)
+    )
+      return
 
     useWallet(chatId, 'argentMobile', async (wallet): Promise<void> => {
       const account = wallet.accounts[0]
@@ -181,13 +214,24 @@ bot.on('callback_query', (query) => {
 
       const salt = stark.randomAddress()
 
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
       const constructorCalldata = CallData.compile([
-        form.values.ownerAddress,
-        form.values.name,
-        form.values.symbol,
-        uint256.bnToUint256(BigInt(form.values.initialSupply) * BigInt(decimalsScale(DECIMALS))),
+        form.values.ownerAddress!,
+        form.values.name!,
+        form.values.symbol!,
+        uint256.bnToUint256(BigInt(form.values.initialSupply!) * BigInt(decimalsScale(DECIMALS))),
         salt,
       ])
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
+
+      const tokenAddress = hash.calculateContractAddressFromHash(
+        salt,
+        TOKEN_CLASS_HASH,
+        constructorCalldata.slice(0, -1),
+        FACTORY_ADDRESS,
+      )
+
+      bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
 
       const result = await wallet.invokeTransaction({
         accountAddress: account,
@@ -206,6 +250,18 @@ bot.on('callback_query', (query) => {
         bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
         return
       }
+
+      bot.sendMessage(
+        chatId,
+        dedent`
+          Meme coin deployed.
+          *Address*: ${tokenAddress}
+          *Name*: ${form.values.name}
+          *Symbol*: ${form.values.symbol}
+          *Owner*: ${form.values.ownerAddress}
+          *Initial Supply*: ${form.values.initialSupply}
+        `.trim(),
+      )
     })
   }
 })

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
+    "watch": "bun --watch src/index.ts",
     "format:check": "prettier -c \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint:check": "eslint \"src/**/*.ts\"",

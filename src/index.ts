@@ -7,19 +7,25 @@ console.log('Bot is running...')
 import './commands/start'
 import './commands/unrug'
 import './commands/deploy'
+import './commands/launch'
 
 // ************ BOT INFO ************
 
-bot.setMyCommands(
-  [
-    {
-      command: 'start',
-      description: 'Starts the bot',
-    },
-    {
-      command: 'unrug',
-      description: 'Checks if a token is unruggable.\nUsage: /unrug [token_address]',
-    },
-  ],
-  { scope: { type: 'default' } },
-)
+const start = {
+  command: 'start',
+  description: 'Starts the bot',
+}
+
+const unrug = {
+  command: 'unrug',
+  description: 'Checks if a token is unruggable. Usage: /unrug [token_address]',
+}
+
+const deploy = {
+  command: 'deploy',
+  description: 'Deploys a new meme coin.',
+}
+
+bot.setMyCommands([start, unrug], { scope: { type: 'default' } })
+
+bot.setMyCommands([start, unrug, deploy], { scope: { type: 'all_private_chats' } })

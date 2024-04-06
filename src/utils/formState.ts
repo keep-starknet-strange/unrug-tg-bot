@@ -1,42 +1,107 @@
-export const formState = new (class FormState {
+import { AMMs } from './constants'
+
+export type Forms = {
+  deploy: {
+    name?: string
+    symbol?: string
+    ownerAddress?: string
+    initialSupply?: number
+    deploy: undefined
+  }
+  launch: {
+    amm?: keyof typeof AMMs
+
+    teamAllocation: {
+      holderAddress: string
+      amount: number
+    }[]
+    teamAllocationAmount?: number
+    teamAllocationAddress?: string
+
+    holdLimit?: number
+    disableAntibotAfter?: number
+    startingMarketCap?: number
+
+    ekuboFees?: number
+    lockLiquidity?: number
+
+    launch: undefined
+  }
+}
+
+const defaultValues: Forms = {
+  deploy: {
+    name: undefined,
+    symbol: undefined,
+    ownerAddress: undefined,
+    initialSupply: undefined,
+    deploy: undefined,
+  },
+  launch: {
+    amm: undefined,
+
+    teamAllocation: [],
+    teamAllocationAmount: undefined,
+    teamAllocationAddress: undefined,
+
+    holdLimit: undefined,
+    disableAntibotAfter: undefined,
+    startingMarketCap: undefined,
+
+    ekuboFees: undefined,
+    lockLiquidity: undefined,
+
+    launch: undefined,
+  },
+}
+
+class FormState<FormKeys extends keyof Forms> {
   public forms: Record<
     // Chat ID
     number,
     | {
-        activeForm?: string
-        activeField?: string
-        values: Record<string, string>
+        activeForm?: FormKeys
+        activeField: keyof Forms[FormKeys] | undefined
+        values: Forms[FormKeys]
       }
     | undefined
   > = {}
 
-  public resetForm = (key: number) => {
-    delete this.forms[key]
+  public resetForm = (chatId: number) => {
+    delete this.forms[chatId]
   }
 
-  public setActiveForm = (key: number, form: string) => {
-    this.forms[key] = {
+  public setActiveForm = (chatId: number, form: FormKeys) => {
+    this.forms[chatId] = {
       activeForm: form,
       activeField: undefined,
-      values: {},
+      values: defaultValues[form],
     }
   }
 
-  public setActiveField = (key: number, field: string | undefined) => {
-    if (!this.forms[key]) this.setActiveForm(key, 'default')
+  public setActiveField = (chatId: number, field: keyof Forms[FormKeys] | undefined) => {
+    if (!this.forms[chatId]) return
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this.forms[key]!.activeField = field
+    this.forms[chatId]!.activeField = field
   }
 
-  public setValue = (key: number, field: string, value: string) => {
-    if (!this.forms[key]) this.setActiveForm(key, 'default')
+  public setValue = <TField extends keyof Forms[FormKeys]>(
+    chatId: number,
+    field: TField,
+    value: Forms[FormKeys][TField],
+  ) => {
+    if (!this.forms[chatId]) return
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this.forms[key]!.values[field] = value
+    this.forms[chatId]!.values[field] = value
   }
 
-  public getForm = (key: number) => {
-    return this.forms[key]
+  public getForm = (chatId: number) => {
+    return this.forms[chatId]
   }
-})()
+}
+
+export const formState = new FormState()
+export const deployForm = formState as FormState<'deploy'>
+export const launchForm = formState as FormState<'launch'>
