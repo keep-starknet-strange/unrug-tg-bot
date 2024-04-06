@@ -4,7 +4,12 @@ export type BaseAdapterConstructorOptions = {
   chain: constants.NetworkName
 }
 
-export type ConnectError = 'user_rejected' | 'no_accounts_connected' | 'timeout' | 'unknown_error'
+export type ConnectError =
+  | 'user_rejected'
+  | 'no_accounts_connected'
+  | 'wrong_chain'
+  | 'timeout'
+  | 'unknown_error'
 
 export type ConnectWaitForApprovalReturnType =
   | { error: ConnectError }
@@ -47,6 +52,8 @@ export type OnDisconnectType = {
 }
 
 export abstract class BaseAdapter {
+  public abstract get connected(): boolean
+
   public abstract init(): Promise<void>
 
   public abstract connect(): Promise<ConnectReturnType>

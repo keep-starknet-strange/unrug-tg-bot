@@ -1,4 +1,5 @@
 import { SignClient } from '@walletconnect/sign-client'
+import type { SessionTypes } from '@walletconnect/types'
 import { constants } from 'starknet'
 
 import {
@@ -23,6 +24,35 @@ export class ArgentAdapter extends BaseAdapter {
     super()
 
     this.chain = options.chain
+  }
+
+  public get connected(): boolean {
+    if (!this.signClient) return false
+
+    const validSession = this.signClient.session.getAll().find(this.isValidSession)
+    if (!validSession) return false
+
+    this.topic = validSession.topic
+    return true
+  }
+
+  protected isValidSession(session: SessionTypes.Struct): boolean {
+    if (!this.isValidChains(session)) return false
+    if (!this.isValidAccounts(session)) return false
+
+    return true
+  }
+
+  protected isValidChains(session: SessionTypes.Struct): boolean {
+    return (
+      session.requiredNamespaces?.[this.namespace]?.chains?.includes(this.chainNamespace) ?? false
+    )
+  }
+
+  protected isValidAccounts(session: SessionTypes.Struct): boolean {
+    return session.namespaces?.[this.namespace]?.accounts?.some((account) =>
+      account.startsWith(`${this.chainNamespace}:`),
+    )
   }
 
   protected get chainNamespace(): string {
@@ -93,20 +123,30 @@ export class ArgentAdapter extends BaseAdapter {
       const waitForApproval = async (): Promise<ConnectWaitForApprovalReturnType> => {
         const result = await approval()
 
-        const accounts = result.namespaces[this.namespace].accounts
+        // Connected accounts are prefixed with the chain and namespace
+        // Example: "starknet:SNMAIN:0x028446b7625a071bd169022ee8c77c1aad1e13d40994f54b2d84f8cde6aa458d"
+        // Since we're only connecting for a single chain, we can remove the chain prefix
+        const connectedAccounts = result.namespaces[this.namespace].accounts
+          .filter((account) => account.startsWith(`${this.chainNamespace}:`))
+          .map((account: string) => account.replace(`${this.chainNamespace}:`, ''))
 
-        if (accounts.length === 0) {
+        if (connectedAccounts.length === 0) {
           return {
             error: 'no_accounts_connected',
           }
         }
 
-        // Connected accounts are prefixed with the chain and namespace
-        // Example: "starknet:SNMAIN:0x028446b7625a071bd169022ee8c77c1aad1e13d40994f54b2d84f8cde6aa458d"
-        // Since we're only connecting for a single chain, we can remove the chain prefix
-        const connectedAccounts = accounts.map((account: string) =>
-          account.replace(`${this.chainNamespace}:`, ''),
-        )
+        if (!this.isValidChains(result)) {
+          return {
+            error: 'wrong_chain',
+          }
+        }
+
+        if (!this.isValidSession(result)) {
+          return {
+            error: 'unknown_error',
+          }
+        }
 
         this.topic = result.topic
 

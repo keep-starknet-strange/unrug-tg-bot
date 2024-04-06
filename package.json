@@ -13,6 +13,7 @@
     "@types/node-telegram-bot-api": "^0.64.3",
     "@types/qrcode": "^1.5.5",
     "@uniswap/eslint-config": "^1.2.0",
+    "@walletconnect/types": "^2.12.1",
     "bun-types": "latest",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
