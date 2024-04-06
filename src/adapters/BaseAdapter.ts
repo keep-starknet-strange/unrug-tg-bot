@@ -42,7 +42,7 @@ export type DisconnectReturnType =
 
 export type RequestParams = {
   method: string
-  params: any[]
+  params: any
 }
 
 export type RequestReturnType = { error: 'unknown_error' } | { result: unknown }
@@ -54,12 +54,15 @@ export type OnDisconnectType = {
 export abstract class BaseAdapter {
   public abstract get connected(): boolean
 
+  public abstract get accounts(): string[]
+
   public abstract init(): Promise<void>
 
   public abstract connect(): Promise<ConnectReturnType>
   public abstract disconnect(): Promise<DisconnectReturnType>
 
   public abstract request(params: RequestParams): Promise<RequestReturnType>
+  public abstract invokeTransaction(params: object): Promise<RequestReturnType>
 
   public abstract onDisconnect(onDisconnect: (data: OnDisconnectType) => void): void
 }

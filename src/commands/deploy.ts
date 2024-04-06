@@ -1,8 +1,12 @@
+import { CallData, stark, uint256 } from 'starknet'
 import dedent from 'ts-dedent'
 
 import { bot } from '../services/bot'
+import { useWallet } from '../services/wallet'
 import { isValidL2Address } from '../utils/address'
+import { DECIMALS, FACTORY_ADDRESS, Selector } from '../utils/constants'
 import { formState } from '../utils/formState'
+import { decimalsScale } from '../utils/helpers'
 
 bot.onText(/\/deploy/, async (msg): Promise<void> => {
   formState.resetForm(msg.chat.id)
@@ -114,7 +118,7 @@ bot.on('message', (msg) => {
       return
     }
 
-    formState.setValue(msg.chat.id, 'initialSupply', msg.text)
+    formState.setValue(msg.chat.id, 'initialSupply', value.toString())
     formState.setActiveField(msg.chat.id, 'deploy')
 
     const newForm = formState.getForm(msg.chat.id)
@@ -155,19 +159,53 @@ bot.on('message', (msg) => {
 
 bot.on('callback_query', (query) => {
   if (!query.data || !query.message || !query.data.startsWith('deploy_')) return
+  const chatId = query.message.chat.id
 
-  const form = formState.getForm(query.message.chat.id)
+  const form = formState.getForm(chatId)
 
   if (form?.activeForm !== 'deploy' || form.activeField !== 'deploy') return
 
   if (query.data === 'deploy_cancel') {
-    formState.resetForm(query.message.chat.id)
-    bot.deleteMessage(query.message.chat.id, query.message.message_id)
-    bot.sendMessage(query.message.chat.id, 'Deployment cancelled.')
+    formState.resetForm(chatId)
+    bot.deleteMessage(chatId, query.message.message_id)
+    bot.sendMessage(chatId, 'Deployment cancelled.')
   }
 
   if (query.data === 'deploy_confirm') {
-    // deploy
-    formState.resetForm(query.message.chat.id)
+    formState.resetForm(chatId)
+    bot.deleteMessage(chatId, query.message.message_id)
+
+    useWallet(chatId, 'argentMobile', async (wallet): Promise<void> => {
+      const account = wallet.accounts[0]
+      if (!account) return
+
+      const salt = stark.randomAddress()
+
+      const constructorCalldata = CallData.compile([
+        form.values.ownerAddress,
+        form.values.name,
+        form.values.symbol,
+        uint256.bnToUint256(BigInt(form.values.initialSupply) * BigInt(decimalsScale(DECIMALS))),
+        salt,
+      ])
+
+      const result = await wallet.invokeTransaction({
+        accountAddress: account,
+        executionRequest: {
+          calls: [
+            {
+              contractAddress: FACTORY_ADDRESS,
+              entrypoint: Selector.CREATE_MEMECOIN,
+              calldata: constructorCalldata,
+            },
+          ],
+        },
+      })
+
+      if ('error' in result) {
+        bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
+        return
+      }
+    })
   }
 })

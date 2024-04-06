@@ -29,11 +29,22 @@ export class ArgentAdapter extends BaseAdapter {
   public get connected(): boolean {
     if (!this.signClient) return false
 
-    const validSession = this.signClient.session.getAll().find(this.isValidSession)
+    const validSession = this.signClient.session.getAll().find(this.isValidSession.bind(this))
     if (!validSession) return false
 
     this.topic = validSession.topic
     return true
+  }
+
+  public get accounts(): string[] {
+    if (!this.signClient || !this.connected) return []
+
+    const validSession = this.signClient.session.getAll().find(this.isValidSession.bind(this))
+    if (!validSession) return []
+
+    return validSession.namespaces[this.namespace].accounts
+      .filter((account) => account.startsWith(`${this.chainNamespace}:`))
+      .map((account) => account.replace(`${this.chainNamespace}:`, ''))
   }
 
   protected isValidSession(session: SessionTypes.Struct): boolean {
@@ -231,6 +242,13 @@ export class ArgentAdapter extends BaseAdapter {
         error: 'unknown_error',
       }
     }
+  }
+
+  public async invokeTransaction(params: object): Promise<RequestReturnType> {
+    return this.request({
+      method: `${this.namespace}_requestAddInvokeTransaction`,
+      params,
+    })
   }
 
   public onDisconnect(onDisconnect: (data: OnDisconnectType) => void): void {
