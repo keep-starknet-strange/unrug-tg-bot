@@ -1,6 +1,7 @@
 import { Percent } from '@uniswap/sdk-core'
 
 import { bot } from '../services/bot'
+import { formState } from '../utils/formState'
 import { isValidStarknetAddress } from '../utils/helpers'
 import { parseLiquidityParams } from '../utils/liquidity'
 import { getTokenData, parseTokenData } from '../utils/memecoinData'
@@ -8,6 +9,8 @@ import { formatPercentage } from '../utils/price'
 
 // Matches "/unrug [token_address]"
 bot.onText(/\/unrug (.+)/, (msg, match) => {
+  formState.resetForm(msg.chat.id)
+
   // TODO: add usage
   if (!match?.[1]) return
 

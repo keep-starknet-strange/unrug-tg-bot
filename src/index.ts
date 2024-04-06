@@ -6,6 +6,7 @@ console.log('Bot is running...')
 
 import './commands/start'
 import './commands/unrug'
+import './commands/deploy'
 
 // ************ BOT INFO ************
 

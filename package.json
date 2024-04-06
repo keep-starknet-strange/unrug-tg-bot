@@ -26,6 +26,7 @@
     "@walletconnect/sign-client": "^2.12.1",
     "node-telegram-bot-api": "^0.65.1",
     "qrcode": "^1.5.3",
-    "starknet": "^5.24.3"
+    "starknet": "^5.24.3",
+    "ts-dedent": "^2.2.0"
   }
 }
