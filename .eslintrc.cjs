@@ -5,10 +5,8 @@ module.exports = {
 
   overrides: [
     {
-      // Somehow the import/no-unused-modules rule can't be turned off in rules
       files: ['*.ts'],
       rules: {
-        'import/no-unused-modules': 'off',
         'prettier/prettier': [
           'error',
           {

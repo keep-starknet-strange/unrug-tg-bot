@@ -1,11 +1,4 @@
-import {
-  CallContractResponse,
-  CallData,
-  getChecksumAddress,
-  hash,
-  shortString,
-  uint256,
-} from 'starknet'
+import { CallContractResponse, CallData, getChecksumAddress, hash, shortString, uint256 } from 'starknet'
 
 import { provider } from '../services/provider'
 import { LiquidityType, Memecoin } from '../types'
@@ -92,10 +85,7 @@ export async function getTokenData(tokenAddress: string) {
   })
 }
 
-export async function parseTokenData(
-  tokenAddress: string,
-  res: CallContractResponse,
-): Promise<Memecoin | null> {
+export async function parseTokenData(tokenAddress: string, res: CallContractResponse): Promise<Memecoin | null> {
   const isUnruggable = !!+res.result[3] // beautiful
 
   if (!isUnruggable) return null
@@ -131,9 +121,7 @@ export async function parseTokenData(
           lockManager,
           lockPosition: res.result[31],
           quoteToken: getChecksumAddress(res.result[28]),
-          quoteAmount: uint256
-            .uint256ToBN({ low: res.result[29], high: res.result[30] })
-            .toString(),
+          quoteAmount: uint256.uint256ToBN({ low: res.result[29], high: res.result[30] }).toString(),
         } as const
 
         return {

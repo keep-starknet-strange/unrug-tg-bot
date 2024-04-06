@@ -42,9 +42,7 @@ async function computeResponse(chatId: number, tokenAddress: string): Promise<st
       }
 
       let response =
-        `This token IS Unruggable ✅\n\n` +
-        `Token name: ${memecoin.name}\n` +
-        `Token symbol: $${memecoin.symbol}\n`
+        `This token IS Unruggable ✅\n\n` + `Token name: ${memecoin.name}\n` + `Token symbol: $${memecoin.symbol}\n`
 
       if (!memecoin.isLaunched) {
         response += '\nNot launched yet.'

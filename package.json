@@ -7,7 +7,7 @@
     "format:check": "prettier -c \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint:check": "eslint \"src/**/*.ts\"",
-    "lint": "yarn lint:check --fix"
+    "lint": "eslint \"src/**/*.ts\" --fix"
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.64.3",
