@@ -9,6 +9,7 @@ export type Forms = {
     deploy: undefined
   }
   launch: {
+    address: string
     amm?: keyof typeof AMMs
 
     teamAllocation: {
@@ -38,6 +39,7 @@ const defaultValues: Forms = {
     deploy: undefined,
   },
   launch: {
+    address: '',
     amm: undefined,
 
     teamAllocation: [],

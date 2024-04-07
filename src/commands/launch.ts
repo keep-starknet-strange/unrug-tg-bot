@@ -1,8 +1,10 @@
 import dedent from 'ts-dedent'
 
 import { bot } from '../services/bot'
-import { AMMs } from '../utils/constants'
+import { AMMs, DECIMALS } from '../utils/constants'
 import { formState, launchForm } from '../utils/formState'
+import { decimalsScale } from '../utils/helpers'
+import { getTokenData, parseTokenData } from '../utils/memecoinData'
 import { LaunchValidation, validateAndSend } from '../utils/validation'
 
 bot.onText(/\/launch/, async (msg): Promise<void> => {
@@ -13,29 +15,17 @@ bot.onText(/\/launch/, async (msg): Promise<void> => {
 
   formState.resetForm(msg.chat.id)
 
-  let ammMessage =
-    "Hi there! Let's launch your meme coin! Please choose an AMM to launch your token."
-  Object.values(AMMs).forEach((amm) => {
-    ammMessage += `\n\n*${amm.name}*: ${amm.description}`
-  })
-
-  await bot.sendMessage(msg.chat.id, ammMessage, {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [
-        Object.entries(AMMs).map(([key, amm]) => ({
-          text: amm.name,
-          callback_data: `launch_amm_${key}`,
-        })),
-      ],
-    },
-  })
+  await bot.sendMessage(
+    msg.chat.id,
+    `Hi! Let's launch your meme coin! Please enter the *address* your token.`,
+    { parse_mode: 'Markdown' },
+  )
 
   formState.setActiveForm(msg.chat.id, 'launch')
-  launchForm.setActiveField(msg.chat.id, 'amm')
+  launchForm.setActiveField(msg.chat.id, 'address')
 })
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
   if (!msg.text || msg.text.startsWith('/')) return
   const chatId = msg.chat.id
 
@@ -44,20 +34,57 @@ bot.on('message', (msg) => {
 
   const activeField = form?.activeField
 
-  if (activeField === 'teamAllocationAmount') {
-    const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.teamAllocationAmount)
+  if (activeField === 'address') {
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.address)
     if (value === false) return
 
-    // TODO: get the max available supply
+    const rawToken = await getTokenData(value)
+    const token = await parseTokenData(value, rawToken)
+
+    if (!token) {
+      bot.sendMessage(
+        chatId,
+        'Invalid token address. Please provide a valid unruggable meme token address.',
+      )
+      return
+    }
+    if (token?.isLaunched) {
+      bot.sendMessage(chatId, 'This token has already been launched.')
+      return
+    }
+
+    let ammMessage = 'Please choose an AMM to launch your token.'
+    Object.values(AMMs).forEach((amm) => {
+      ammMessage += `\n\n*${amm.name}*: ${amm.description}`
+    })
+
+    bot.sendMessage(chatId, ammMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          Object.entries(AMMs).map(([key, amm]) => ({
+            text: amm.name,
+            callback_data: `launch_amm_${key}`,
+          })),
+        ],
+      },
+    })
+
+    launchForm.setActiveField(chatId, 'amm')
+  }
+
+  if (activeField === 'teamAllocationAmount') {
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.teamAllocationAmount)
+    if (value === false) return
 
     launchForm.setValue(chatId, 'teamAllocationAmount', value)
     launchForm.setActiveField(chatId, 'teamAllocationAddress')
 
-    bot.sendMessage(msg.chat.id, `Please provide the address of the team member.`)
+    bot.sendMessage(chatId, `Please provide the address of the team member.`)
   }
 
   if (activeField === 'teamAllocationAddress') {
-    const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.teamAllocationAddress)
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.teamAllocationAddress)
     if (value === false) return
 
     launchForm.setValue(chatId, 'teamAllocation', [
@@ -101,20 +128,20 @@ bot.on('message', (msg) => {
   }
 
   if (activeField === 'holdLimit') {
-    const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.holdLimit)
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.holdLimit)
     if (value === false) return
 
     launchForm.setValue(chatId, 'holdLimit', value)
     launchForm.setActiveField(chatId, 'disableAntibotAfter')
 
     bot.sendMessage(
-      msg.chat.id,
+      chatId,
       `When should the anti bot features be disabled? Between 00:30 - 24:00 (hh:mm format, e.g. 12:30)`,
     )
   }
 
   if (activeField === 'disableAntibotAfter') {
-    const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.disableAfter)
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.disableAfter)
     if (value === false) return
 
     const [hours, minutes] = value.split(':').map((part) => parseInt(part, 10)) || []
@@ -130,7 +157,7 @@ bot.on('message', (msg) => {
   }
 
   if (activeField === 'startingMarketCap') {
-    const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.startingMarketCap)
+    const value = validateAndSend(chatId, msg.text, LaunchValidation.startingMarketCap)
     if (value === false) return
 
     launchForm.setValue(chatId, 'startingMarketCap', value)
@@ -158,20 +185,18 @@ bot.on('message', (msg) => {
 
   if (activeField === 'ekuboFees' || activeField === 'lockLiquidity') {
     if (activeField === 'ekuboFees') {
-      const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.ekuboFees)
+      const value = validateAndSend(chatId, msg.text, LaunchValidation.ekuboFees)
       if (value === false) return
 
       launchForm.setValue(chatId, 'ekuboFees', value)
     }
 
     if (activeField === 'lockLiquidity') {
-      const value = validateAndSend(msg.chat.id, msg.text, LaunchValidation.lockLiquidty)
+      const value = validateAndSend(chatId, msg.text, LaunchValidation.lockLiquidty)
       if (value === false) return
 
       launchForm.setValue(chatId, 'lockLiquidity', value === 'forever' ? Infinity : Number(value))
     }
-
-    launchForm.setActiveField(chatId, 'launch')
 
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
     const { disableAntibotAfter } = form.values
@@ -203,7 +228,25 @@ bot.on('message', (msg) => {
     }
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
-    bot.sendMessage(chatId, message.trim(), { parse_mode: 'Markdown' })
+    launchForm.setActiveField(chatId, 'launch')
+
+    bot.sendMessage(chatId, message.trim(), {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: 'Cancel',
+              callback_data: `launch_launch_cancel`,
+            },
+            {
+              text: 'Launch',
+              callback_data: `launch_launch_confirm`,
+            },
+          ],
+        ],
+      },
+    })
   }
 })
 
@@ -268,21 +311,51 @@ bot.on('callback_query', async (query) => {
     }
 
     if (step === 'continue') {
-      await bot.sendMessage(
-        chatId,
-        dedent`
-          ${form.values.teamAllocation.length} team allocations added. All team allocations:
-          ${form.values.teamAllocation
-            .map((team) =>
-              dedent`
-                *  Amount*: ${team.amount}
-                *  Address*: ${team.holderAddress}
-              `.trim(),
-            )
-            .join('\n\n')}
-        `,
-        { parse_mode: 'Markdown' },
-      )
+      if (form.values.teamAllocation.length > 0) {
+        const loadingMsg = await bot.sendMessage(chatId, 'Loading...')
+
+        const rawToken = await getTokenData(form.values.address)
+        const token = await parseTokenData(form.values.address, rawToken)
+        if (!token) return
+
+        await bot.deleteMessage(chatId, loadingMsg.message_id)
+
+        const totalTeamAllocation =
+          BigInt(
+            form.values.teamAllocation.reduce((acc, allocation) => acc + allocation.amount, 0),
+          ) * BigInt(decimalsScale(DECIMALS))
+
+        if (totalTeamAllocation > BigInt(token.totalSupply)) {
+          await bot.sendMessage(
+            chatId,
+            dedent`
+              Total team allocation exceeds the total supply of the token. Team allocations discarded. Please start over.
+              *Total Supply*: ${BigInt(token.totalSupply) / BigInt(decimalsScale(DECIMALS))}
+              *Total Team Allocation*: ${totalTeamAllocation / BigInt(decimalsScale(DECIMALS))}
+            `.trim(),
+            { parse_mode: 'Markdown' },
+          )
+
+          launchForm.resetForm(chatId)
+          return
+        }
+
+        await bot.sendMessage(
+          chatId,
+          dedent`
+            ${form.values.teamAllocation.length} team allocations added. All team allocations:
+            ${form.values.teamAllocation
+              .map((team) =>
+                dedent`
+                  *  Amount*: ${team.amount}
+                  *  Address*: ${team.holderAddress}
+                `.trim(),
+              )
+              .join('\n\n')}
+          `,
+          { parse_mode: 'Markdown' },
+        )
+      }
 
       launchForm.setActiveField(chatId, 'holdLimit')
 
@@ -292,4 +365,32 @@ bot.on('callback_query', async (query) => {
       )
     }
   }
+
+  if (form?.activeField === 'launch') {
+    if (query.data === 'launch_launch_cancel') {
+      bot.sendMessage(chatId, 'Launch cancelled and all data has been discarded.')
+      formState.resetForm(chatId)
+    }
+
+    if (query.data === 'launch_launch_confirm') {
+      switch (form.values.amm) {
+        case 'ekubo':
+          launchOnEkubo(form)
+          break
+
+        case 'jediswap':
+        case 'starkdefi':
+          launchOnStandardAMM(form)
+          break
+      }
+    }
+  }
 })
+
+const launchOnEkubo = async (form: ReturnType<typeof launchForm.getForm>) => {
+  //
+}
+
+const launchOnStandardAMM = async (form: ReturnType<typeof launchForm.getForm>) => {
+  //
+}

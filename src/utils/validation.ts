@@ -57,6 +57,8 @@ export const DeployValidation = {
 }
 
 export const LaunchValidation = {
+  address: addressValidation,
+
   teamAllocationAmount: int(number.min(1, '*Initial supply* must be greater than 0')),
   teamAllocationAddress: addressValidation,
 

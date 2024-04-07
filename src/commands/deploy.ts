@@ -174,7 +174,7 @@ bot.on('callback_query', (query) => {
         chatId,
         dedent`
           Meme coin deployed.
-          *Address*: ${tokenAddress}
+          *Address*: \`${tokenAddress}\`
           *Name*: ${form.values.name}
           *Symbol*: ${form.values.symbol}
           *Owner*: ${form.values.ownerAddress}
