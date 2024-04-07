@@ -3,86 +3,10 @@ import { dedent } from 'ts-dedent'
 
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
-import { isValidL2Address } from '../utils/address'
 import { DECIMALS, FACTORY_ADDRESS, Selector, TOKEN_CLASS_HASH } from '../utils/constants'
 import { deployForm, formState } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
-
-// TODO: use zod, yup or another validation library
-const validateName = (name: string | undefined, chatId: number): name is string => {
-  // TODO: min length?
-  if (!name || name.length < 2) {
-    bot.sendMessage(
-      chatId,
-      `The *Name* of the coin can't be shorter than 2 characters. Please provide a longer name.`,
-      { parse_mode: 'Markdown' },
-    )
-    return false
-  }
-
-  // TODO: max length?
-  if (name.length > 256) {
-    bot.sendMessage(
-      chatId,
-      `The *Name* of the coin can't be longer than 256 characters. Please provide a shorter name.`,
-      { parse_mode: 'Markdown' },
-    )
-    return false
-  }
-
-  return true
-}
-
-const validateSymbol = (symbol: string | undefined, chatId: number): symbol is string => {
-  // TODO: min length?
-  if (!symbol || symbol.length < 2) {
-    bot.sendMessage(
-      chatId,
-      `The *Symbol* of the coin can't be shorter than 2 characters. Please provide a longer symbol.`,
-      { parse_mode: 'Markdown' },
-    )
-    return false
-  }
-
-  // TODO: max length?
-  if (symbol.length > 256) {
-    bot.sendMessage(
-      chatId,
-      `The *Symbol* of the coin can't be longer than 256 characters. Please provide a shorter symbol.`,
-      { parse_mode: 'Markdown' },
-    )
-    return false
-  }
-
-  return true
-}
-
-const validateAddress = (address: string | undefined, chatId: number): address is string => {
-  if (!address || !isValidL2Address(address)) {
-    bot.sendMessage(
-      chatId,
-      `The *Owner Address* is invalid. Please provide a valid Starknet address.`,
-      { parse_mode: 'Markdown' },
-    )
-    return false
-  }
-
-  return true
-}
-
-const validateInitialSupply = (
-  initialSupply: number | undefined,
-  chatId: number,
-): initialSupply is number => {
-  if (initialSupply === undefined || isNaN(initialSupply) || initialSupply <= 0) {
-    bot.sendMessage(chatId, `The *Initial Supply* is invalid. Please provide a valid number.`, {
-      parse_mode: 'Markdown',
-    })
-    return false
-  }
-
-  return true
-}
+import { DeployValidation, validateAndSend } from '../utils/validation'
 
 bot.onText(/\/deploy/, async (msg): Promise<void> => {
   if (msg.chat.type !== 'private') {
@@ -111,7 +35,8 @@ bot.on('message', (msg) => {
   const activeField = form?.activeField
 
   if (activeField === 'name') {
-    if (!validateName(msg.text, msg.chat.id)) return
+    const value = validateAndSend(msg.chat.id, msg.text, DeployValidation.name)
+    if (value === false) return
 
     deployForm.setValue(msg.chat.id, 'name', msg.text)
     deployForm.setActiveField(msg.chat.id, 'symbol')
@@ -122,7 +47,8 @@ bot.on('message', (msg) => {
   }
 
   if (activeField === 'symbol') {
-    if (!validateSymbol(msg.text, msg.chat.id)) return
+    const value = validateAndSend(msg.chat.id, msg.text, DeployValidation.symbol)
+    if (value === false) return
 
     deployForm.setValue(msg.chat.id, 'symbol', msg.text)
     deployForm.setActiveField(msg.chat.id, 'ownerAddress')
@@ -133,7 +59,8 @@ bot.on('message', (msg) => {
   }
 
   if (activeField === 'ownerAddress') {
-    if (!validateAddress(msg.text, msg.chat.id)) return
+    const value = validateAndSend(msg.chat.id, msg.text, DeployValidation.ownerAddress)
+    if (value === false) return
 
     deployForm.setValue(msg.chat.id, 'ownerAddress', msg.text)
     deployForm.setActiveField(msg.chat.id, 'initialSupply')
@@ -144,8 +71,8 @@ bot.on('message', (msg) => {
   }
 
   if (activeField === 'initialSupply') {
-    const value = parseInt(msg.text.replace(/[^0-9]/g, ''), 10)
-    if (!validateInitialSupply(value, msg.chat.id)) return
+    const value = validateAndSend(msg.chat.id, msg.text, DeployValidation.initialSupply)
+    if (value === false) return
 
     deployForm.setValue(msg.chat.id, 'initialSupply', value)
     deployForm.setActiveField(msg.chat.id, 'deploy')
@@ -199,14 +126,6 @@ bot.on('callback_query', (query) => {
   if (query.data === 'deploy_confirm') {
     deployForm.resetForm(chatId)
     bot.deleteMessage(chatId, query.message.message_id)
-
-    if (
-      !validateName(form.values.name, chatId) ||
-      !validateSymbol(form.values.symbol, chatId) ||
-      !validateAddress(form.values.ownerAddress, chatId) ||
-      !validateInitialSupply(form.values.initialSupply, chatId)
-    )
-      return
 
     useWallet(chatId, 'argentMobile', async (wallet): Promise<void> => {
       const account = wallet.accounts[0]
