@@ -1,16 +1,9 @@
-import {
-  CallContractResponse,
-  CallData,
-  getChecksumAddress,
-  hash,
-  shortString,
-  uint256,
-} from 'starknet'
+import { CallContractResponse, CallData, getChecksumAddress, hash, shortString, uint256 } from 'starknet'
 
 import { provider } from '../services/provider'
 import { LiquidityType, Memecoin } from '../types'
-import { FACTORY_ADDRESS, MULTICALL_ADDRESS, Selector } from './constants'
-import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from './liquidity'
+import { FACTORY_ADDRESS, MULTICALL_ADDRESS, Selector } from '../utils/constants'
+import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from '../utils/liquidity'
 
 export async function getTokenData(tokenAddress: string) {
   const isMemecoinCalldata = CallData.compile({
@@ -92,10 +85,7 @@ export async function getTokenData(tokenAddress: string) {
   })
 }
 
-export async function parseTokenData(
-  tokenAddress: string,
-  res: CallContractResponse,
-): Promise<Memecoin | null> {
+export async function parseTokenData(tokenAddress: string, res: CallContractResponse): Promise<Memecoin | null> {
   const isUnruggable = !!+res.result[3] // beautiful
 
   if (!isUnruggable) return null
@@ -131,9 +121,7 @@ export async function parseTokenData(
           lockManager,
           lockPosition: res.result[31],
           quoteToken: getChecksumAddress(res.result[28]),
-          quoteAmount: uint256
-            .uint256ToBN({ low: res.result[29], high: res.result[30] })
-            .toString(),
+          quoteAmount: uint256.uint256ToBN({ low: res.result[29], high: res.result[30] }).toString(),
         } as const
 
         return {
@@ -170,4 +158,8 @@ export async function parseTokenData(
   } else {
     return { ...baseMemecoin, isLaunched: false }
   }
+}
+
+export async function getMemecoin(tokenAddress: string): Promise<Memecoin | null> {
+  return parseTokenData(tokenAddress, await getTokenData(tokenAddress))
 }

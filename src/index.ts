@@ -26,6 +26,11 @@ const deploy = {
   description: 'Deploys a new meme coin.',
 }
 
+const launch = {
+  command: 'launch',
+  description: 'Launches a deployed meme coin.',
+}
+
 bot.setMyCommands([start, unrug], { scope: { type: 'default' } })
 
-bot.setMyCommands([start, unrug, deploy], { scope: { type: 'all_private_chats' } })
+bot.setMyCommands([start, unrug, deploy, launch], { scope: { type: 'all_private_chats' } })

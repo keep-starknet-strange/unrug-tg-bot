@@ -9,13 +9,13 @@ import { bot } from './bot'
 export const useWallet = async <TAdaptor extends keyof typeof adapters>(
   chatId: number,
   adapter: TAdaptor,
-  onConnect: (adapter: BaseAdapter) => void | Promise<void>,
+  onConnect: (adapter: BaseAdapter, accounts: string[]) => void | Promise<void>,
 ): Promise<void> => {
   if (!chatId) return
 
   const existing = adapterStorage.getAdapter(chatId)
   if (existing && existing.connected) {
-    onConnect(existing)
+    onConnect(existing, existing.accounts)
     return
   }
 
@@ -64,12 +64,18 @@ export const useWallet = async <TAdaptor extends keyof typeof adapters>(
 
     const result = await waitForApproval()
     if ('error' in result) {
-      if (result.error === 'no_accounts_connected') {
-        bot.sendMessage(chatId, 'No accounts connected to wallet')
-      } else if (result.error === 'wrong_chain') {
-        bot.sendMessage(chatId, 'Wrong chain selected. Please switch to Starknet Mainnet')
-      } else if (result.error === 'unknown_error') {
-        bot.sendMessage(chatId, 'Failed to connect to wallet')
+      switch (result.error) {
+        case 'no_accounts_connected':
+          bot.sendMessage(chatId, 'No accounts connected to wallet')
+          break
+
+        case 'wrong_chain':
+          bot.sendMessage(chatId, 'Wrong chain selected. Please switch to Starknet Mainnet')
+          break
+
+        case 'unknown_error':
+          bot.sendMessage(chatId, 'Failed to connect to wallet')
+          break
       }
 
       bot.deleteMessage(connectMsg.chat.id, connectMsg.message_id)
@@ -80,7 +86,7 @@ export const useWallet = async <TAdaptor extends keyof typeof adapters>(
 
     bot.sendMessage(chatId, `Connected to wallet with account: ${accounts[0]}`)
     bot.deleteMessage(connectMsg.chat.id, connectMsg.message_id)
-    onConnect(newAdapter)
+    onConnect(newAdapter, accounts)
   } catch (e) {
     bot.sendMessage(chatId, 'Failed to connect to wallet')
   }

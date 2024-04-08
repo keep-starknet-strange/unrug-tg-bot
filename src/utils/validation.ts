@@ -3,8 +3,7 @@ import { z, ZodSchema } from 'zod'
 import { bot } from '../services/bot'
 import { isValidL2Address } from './address'
 
-const int = <TSchema extends ZodSchema>(schema: TSchema) =>
-  z.preprocess((x) => String(x).replace(/[.,]/g, ''), schema)
+const int = <TSchema extends ZodSchema>(schema: TSchema) => z.preprocess((x) => String(x).replace(/[.,]/g, ''), schema)
 
 const number = z.coerce.number({
   invalid_type_error: 'Please provide a valid number.',
@@ -62,22 +61,15 @@ export const LaunchValidation = {
   teamAllocationAmount: int(number.min(1, '*Initial supply* must be greater than 0')),
   teamAllocationAddress: addressValidation,
 
-  holdLimit: number
-    .min(0.5, '*Hold limit* cannot fall behind 0.5%')
-    .max(100, '*Hold limit* cannot exceed 100%'),
+  holdLimit: number.min(0.5, '*Hold limit* cannot fall behind 0.5%').max(100, '*Hold limit* cannot exceed 100%'),
 
   disableAfter: z
     .string()
-    .regex(
-      /^(24:00)|(([01]\d|2[0-3]):([0-5]\d))$/,
-      'Please provide a time in HH:MM format. Example: 24:00',
-    ),
+    .regex(/^(24:00)|(([01]\d|2[0-3]):([0-5]\d))$/, 'Please provide a time in HH:MM format. Example: 24:00'),
 
   startingMarketCap: int(number.min(5000, '*Market Cap* cannot fall behind 5.000$')),
 
-  ekuboFees: number
-    .min(0.01, '*Ekubo Fees* cannot fall behind 0.01%')
-    .max(2, '*Ekubo Fees* cannot exceed 2%'),
+  ekuboFees: number.min(0.01, '*Ekubo Fees* cannot fall behind 0.01%').max(2, '*Ekubo Fees* cannot exceed 2%'),
 
   lockLiquidty: z.union([
     z

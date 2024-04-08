@@ -55,9 +55,7 @@ export class ArgentAdapter extends BaseAdapter {
   }
 
   protected isValidChains(session: SessionTypes.Struct): boolean {
-    return (
-      session.requiredNamespaces?.[this.namespace]?.chains?.includes(this.chainNamespace) ?? false
-    )
+    return session.requiredNamespaces?.[this.namespace]?.chains?.includes(this.chainNamespace) ?? false
   }
 
   protected isValidAccounts(session: SessionTypes.Struct): boolean {
@@ -83,21 +81,12 @@ export class ArgentAdapter extends BaseAdapter {
       metadata: {
         name: 'Unruggable Meme',
         description: 'Unruggable Meme Telegram Bot',
-        url: '#',
-        icons: [],
+        url: 'https://unruggable.meme',
+        icons: [
+          'https://unruggable.meme/favicon/android-chrome-192x192.png',
+          'https://unruggable.meme/favicon/favicon.ico',
+        ],
       },
-    })
-
-    this.signClient.on('session_event', (...args: any[]) => {
-      console.log('session_event', args)
-    })
-
-    this.signClient.on('session_update', (...args: any[]) => {
-      console.log('session_update', args)
-    })
-
-    this.signClient.on('session_delete', (...args: any[]) => {
-      console.log('session_delete', args)
     })
   }
 

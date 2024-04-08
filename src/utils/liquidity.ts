@@ -92,9 +92,7 @@ export async function parseLiquidityParams(memecoin: LaunchedMemecoin) {
     }
   }
 
-  const parsedStartingMcap = startingMcap
-    ? `$${startingMcap.toFixed(0, { groupSeparator: ',' })}`
-    : 'UNKNOWN'
+  const parsedStartingMcap = startingMcap ? `$${startingMcap.toFixed(0, { groupSeparator: ',' })}` : 'UNKNOWN'
 
   return {
     isQuoteTokenSafe,

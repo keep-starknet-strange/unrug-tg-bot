@@ -19,10 +19,9 @@ export async function getEtherPrice(blockIdentifier: BlockNumber = BlockTag.late
       const reserve0 = { low: res.result[0], high: res.result[1] }
       const reserve1 = { low: res.result[2], high: res.result[3] }
 
-      return new Fraction(
-        uint256.uint256ToBN(reserve1).toString(),
-        uint256.uint256ToBN(reserve0).toString(),
-      ).multiply(decimalsScale(12))
+      return new Fraction(uint256.uint256ToBN(reserve1).toString(), uint256.uint256ToBN(reserve0).toString()).multiply(
+        decimalsScale(12),
+      )
     })
 }
 
@@ -31,10 +30,7 @@ interface ParseCurrencyAmountOptions {
   significant?: number
 }
 
-export const formatCurrenyAmount = (
-  amount: Fraction,
-  { fixed, significant = 1 }: ParseCurrencyAmountOptions,
-) => {
+export const formatCurrenyAmount = (amount: Fraction, { fixed, significant = 1 }: ParseCurrencyAmountOptions) => {
   const fixedAmount = amount.toFixed(fixed)
   const significantAmount = amount.toSignificant(significant)
 

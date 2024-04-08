@@ -1,11 +1,9 @@
-import { CallData, hash, stark, uint256 } from 'starknet'
 import { dedent } from 'ts-dedent'
 
+import { deploy } from '../actions/deploy'
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
-import { DECIMALS, FACTORY_ADDRESS, Selector, TOKEN_CLASS_HASH } from '../utils/constants'
 import { deployForm, formState } from '../utils/formState'
-import { decimalsScale } from '../utils/helpers'
 import { DeployValidation, validateAndSend } from '../utils/validation'
 
 bot.onText(/\/deploy/, async (msg): Promise<void> => {
@@ -18,7 +16,7 @@ bot.onText(/\/deploy/, async (msg): Promise<void> => {
 
   await bot.sendMessage(
     msg.chat.id,
-    `Hi there! Let's deploy a meme coin! Please provide the *Name* of the coin you want to deploy.`,
+    `Hi! Let's deploy a meme coin! Please provide the *Name* of the coin you want to deploy.`,
     { parse_mode: 'Markdown' },
   )
 
@@ -127,43 +125,11 @@ bot.on('callback_query', (query) => {
     deployForm.resetForm(chatId)
     bot.deleteMessage(chatId, query.message.message_id)
 
-    useWallet(chatId, 'argentMobile', async (wallet): Promise<void> => {
-      const account = wallet.accounts[0]
-      if (!account) return
-
-      const salt = stark.randomAddress()
-
-      /* eslint-disable @typescript-eslint/no-non-null-assertion */
-      const constructorCalldata = CallData.compile([
-        form.values.ownerAddress!,
-        form.values.name!,
-        form.values.symbol!,
-        uint256.bnToUint256(BigInt(form.values.initialSupply!) * BigInt(decimalsScale(DECIMALS))),
-        salt,
-      ])
-      /* eslint-enable @typescript-eslint/no-non-null-assertion */
-
-      const tokenAddress = hash.calculateContractAddressFromHash(
-        salt,
-        TOKEN_CLASS_HASH,
-        constructorCalldata.slice(0, -1),
-        FACTORY_ADDRESS,
-      )
-
+    useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {
       bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
 
-      const result = await wallet.invokeTransaction({
-        accountAddress: account,
-        executionRequest: {
-          calls: [
-            {
-              contractAddress: FACTORY_ADDRESS,
-              entrypoint: Selector.CREATE_MEMECOIN,
-              calldata: constructorCalldata,
-            },
-          ],
-        },
-      })
+      const data = form.values as Required<typeof form.values>
+      const result = await deploy(adapter, accounts[0], data)
 
       if ('error' in result) {
         bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
@@ -173,12 +139,12 @@ bot.on('callback_query', (query) => {
       bot.sendMessage(
         chatId,
         dedent`
-          Meme coin deployed.
-          *Address*: \`${tokenAddress}\`
-          *Name*: ${form.values.name}
-          *Symbol*: ${form.values.symbol}
-          *Owner*: ${form.values.ownerAddress}
-          *Initial Supply*: ${form.values.initialSupply}
+          Memecoin deployed.
+          *Address*: \`${result.tokenAddress}\`
+          *Name*: ${data.name}
+          *Symbol*: ${data.symbol}
+          *Owner*: ${data.ownerAddress}
+          *Initial Supply*: ${data.initialSupply}
         `.trim(),
       )
     })

@@ -1,11 +1,38 @@
 import dedent from 'ts-dedent'
 
+import { launchOnEkubo, launchOnStandardAMM } from '../actions/launch'
+import { getTokenData, parseTokenData } from '../actions/memecoinData'
 import { bot } from '../services/bot'
+import { useWallet } from '../services/wallet'
 import { AMMs, DECIMALS } from '../utils/constants'
 import { formState, launchForm } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
-import { getTokenData, parseTokenData } from '../utils/memecoinData'
 import { LaunchValidation, validateAndSend } from '../utils/validation'
+
+const getLaunchInfoMessage = (data: Required<NonNullable<ReturnType<typeof launchForm.getForm>>['values']>): string => {
+  const disableAfter = `${Math.floor(data.disableAntibotAfter / 60)}:${data.disableAntibotAfter % 60}`
+
+  let message = ''
+  message += `*AMM*: ${AMMs[data.amm].name}\n`
+  message += `*Team Allocations*: ${data.teamAllocation.length}\n`
+
+  data.teamAllocation.forEach((allocation) => {
+    message += `*  Amount*: ${allocation.amount}\n`
+    message += `*  Address*: ${allocation.holderAddress}\n\n`
+  })
+
+  message += `*Hold Limit*: ${data.holdLimit}%\n`
+  message += `*Disable Antibot After*: ${disableAfter}\n`
+  message += `*Starting Market Cap*: $${data.startingMarketCap}\n`
+
+  if (data.amm === 'ekubo') message += `*Ekubo Fees*: ${data.ekuboFees}%\n`
+
+  message += '*Liquidity Lock*: '
+  if (!data.lockLiquidity === undefined || data.lockLiquidity === Infinity) message += 'Forever\n'
+  else message += `${data.lockLiquidity} months\n`
+
+  return message.trim()
+}
 
 bot.onText(/\/launch/, async (msg): Promise<void> => {
   if (msg.chat.type !== 'private') {
@@ -15,11 +42,9 @@ bot.onText(/\/launch/, async (msg): Promise<void> => {
 
   formState.resetForm(msg.chat.id)
 
-  await bot.sendMessage(
-    msg.chat.id,
-    `Hi! Let's launch your meme coin! Please enter the *address* your token.`,
-    { parse_mode: 'Markdown' },
-  )
+  await bot.sendMessage(msg.chat.id, `Hi! Let's launch your memecoin! Please enter the *address* your token.`, {
+    parse_mode: 'Markdown',
+  })
 
   formState.setActiveForm(msg.chat.id, 'launch')
   launchForm.setActiveField(msg.chat.id, 'address')
@@ -42,16 +67,15 @@ bot.on('message', async (msg) => {
     const token = await parseTokenData(value, rawToken)
 
     if (!token) {
-      bot.sendMessage(
-        chatId,
-        'Invalid token address. Please provide a valid unruggable meme token address.',
-      )
+      bot.sendMessage(chatId, 'Invalid token address. Please provide a valid unruggable memecoin address.')
       return
     }
     if (token?.isLaunched) {
       bot.sendMessage(chatId, 'This token has already been launched.')
       return
     }
+
+    launchForm.setValue(chatId, 'address', value)
 
     let ammMessage = 'Please choose an AMM to launch your token.'
     Object.values(AMMs).forEach((amm) => {
@@ -150,10 +174,7 @@ bot.on('message', async (msg) => {
     launchForm.setValue(chatId, 'disableAntibotAfter', time)
     launchForm.setActiveField(chatId, 'startingMarketCap')
 
-    bot.sendMessage(
-      chatId,
-      `Please provide the starting market cap (in USD) of the token. (10.000$ Recommended)`,
-    )
+    bot.sendMessage(chatId, `Please provide the starting market cap (in USD) of the token. (10.000$ Recommended)`)
   }
 
   if (activeField === 'startingMarketCap') {
@@ -198,39 +219,10 @@ bot.on('message', async (msg) => {
       launchForm.setValue(chatId, 'lockLiquidity', value === 'forever' ? Infinity : Number(value))
     }
 
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const { disableAntibotAfter } = form.values
-    const disableAfter = `${Math.floor(disableAntibotAfter! / 60)}:${disableAntibotAfter! % 60}`
-
-    let message = "Here's a summary of the data you've provided:\n"
-    message += `*AMM*: ${AMMs[form.values.amm!].name}\n`
-    message += `*Team Allocations*: ${form.values.teamAllocation.length}\n`
-
-    form.values.teamAllocation.forEach((allocation) => {
-      message += `*  Amount*: ${allocation.amount}\n`
-      message += `*  Address*: ${allocation.holderAddress}\n\n`
-    })
-
-    message += `*Hold Limit*: ${form.values.holdLimit}%\n`
-    message += `*Disable Antibot After*: ${disableAfter}\n`
-    message += `*Starting Market Cap*: $${form.values.startingMarketCap}\n`
-
-    switch (form.values.amm) {
-      case 'ekubo':
-        message += `*Ekubo Fees*: ${form.values.ekuboFees}%\n`
-        break
-
-      case 'jediswap':
-      case 'starkdefi':
-        message += '*Lock Liquidity For*: '
-        if (form.values.lockLiquidity === Infinity) message += 'Forever\n'
-        else message += `${form.values.lockLiquidity} months\n`
-    }
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
-
     launchForm.setActiveField(chatId, 'launch')
 
-    bot.sendMessage(chatId, message.trim(), {
+    const message = getLaunchInfoMessage(form.values as Required<typeof form.values>)
+    bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
@@ -269,26 +261,22 @@ bot.on('callback_query', async (query) => {
     launchForm.setValue(chatId, 'amm', amm as keyof typeof AMMs)
     launchForm.setActiveField(chatId, 'teamAllocation')
 
-    bot.sendMessage(
-      chatId,
-      `Great! Would you like to add team allocation? You can add up to 10 team allocations.`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: 'No',
-                callback_data: 'launch_team_allocation_continue',
-              },
-              {
-                text: 'Yes',
-                callback_data: 'launch_team_allocation_add',
-              },
-            ],
+    bot.sendMessage(chatId, `Great! Would you like to add team allocation? You can add up to 10 team allocations.`, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: 'No',
+              callback_data: 'launch_team_allocation_continue',
+            },
+            {
+              text: 'Yes',
+              callback_data: 'launch_team_allocation_add',
+            },
           ],
-        },
+        ],
       },
-    )
+    })
   }
 
   if (form?.activeField === 'teamAllocation') {
@@ -296,10 +284,7 @@ bot.on('callback_query', async (query) => {
 
     let step = query.data === 'launch_team_allocation_add' ? 'add' : 'continue'
     if (step === 'add' && form.values.teamAllocation.length >= 10) {
-      bot.sendMessage(
-        chatId,
-        'Maximum of 10 team allocations reached. Please continue to the next steps.',
-      )
+      bot.sendMessage(chatId, 'Maximum of 10 team allocations reached. Please continue to the next steps.')
       step = 'continue'
       return
     }
@@ -321,15 +306,15 @@ bot.on('callback_query', async (query) => {
         await bot.deleteMessage(chatId, loadingMsg.message_id)
 
         const totalTeamAllocation =
-          BigInt(
-            form.values.teamAllocation.reduce((acc, allocation) => acc + allocation.amount, 0),
-          ) * BigInt(decimalsScale(DECIMALS))
+          BigInt(form.values.teamAllocation.reduce((acc, allocation) => acc + allocation.amount, 0)) *
+          BigInt(decimalsScale(DECIMALS))
 
         if (totalTeamAllocation > BigInt(token.totalSupply)) {
           await bot.sendMessage(
             chatId,
             dedent`
-              Total team allocation exceeds the total supply of the token. Team allocations discarded. Please start over.
+              Total team allocation exceeds the total supply of the token.
+              Team allocations discarded. Please start over.
               *Total Supply*: ${BigInt(token.totalSupply) / BigInt(decimalsScale(DECIMALS))}
               *Total Team Allocation*: ${totalTeamAllocation / BigInt(decimalsScale(DECIMALS))}
             `.trim(),
@@ -359,10 +344,7 @@ bot.on('callback_query', async (query) => {
 
       launchForm.setActiveField(chatId, 'holdLimit')
 
-      bot.sendMessage(
-        chatId,
-        `Please provide the hold limit between 0.5% and 100%. (1% recommended)`,
-      )
+      bot.sendMessage(chatId, `Please provide the hold limit between 0.5% and 100%. (1% recommended)`)
     }
   }
 
@@ -373,24 +355,32 @@ bot.on('callback_query', async (query) => {
     }
 
     if (query.data === 'launch_launch_confirm') {
-      switch (form.values.amm) {
-        case 'ekubo':
-          launchOnEkubo(form)
-          break
+      launchForm.resetForm(chatId)
+      bot.deleteMessage(chatId, query.message.message_id)
 
-        case 'jediswap':
-        case 'starkdefi':
-          launchOnStandardAMM(form)
-          break
-      }
+      useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {
+        bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
+
+        const data = form.values as Required<typeof form.values>
+
+        let result
+        if (data.amm === 'ekubo') result = await launchOnEkubo(adapter, accounts[0], data)
+        else result = await launchOnStandardAMM(adapter, accounts[0], data)
+
+        if ('error' in result) {
+          bot.sendMessage(chatId, `There was an error deploying the memecoin. Please try again.`)
+          return
+        }
+
+        bot.sendMessage(
+          chatId,
+          dedent`
+            Memecoin launched.
+            ${getLaunchInfoMessage(data)}
+          `.trim(),
+          { parse_mode: 'Markdown' },
+        )
+      })
     }
   }
 })
-
-const launchOnEkubo = async (form: ReturnType<typeof launchForm.getForm>) => {
-  //
-}
-
-const launchOnStandardAMM = async (form: ReturnType<typeof launchForm.getForm>) => {
-  //
-}
