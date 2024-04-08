@@ -4,7 +4,7 @@ import { launchOnEkubo, launchOnStandardAMM } from '../actions/launch'
 import { getTokenData, parseTokenData } from '../actions/memecoinData'
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
-import { AMMs, DECIMALS } from '../utils/constants'
+import { AMMs, DECIMALS, WALLETS } from '../utils/constants'
 import { formState, launchForm } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
 import { LaunchValidation, validateAndSend } from '../utils/validation'
@@ -355,7 +355,29 @@ bot.on('callback_query', async (query) => {
     }
 
     if (query.data === 'launch_launch_confirm') {
-      launchForm.resetForm(chatId)
+      bot.deleteMessage(chatId, query.message.message_id)
+
+      bot.sendMessage(chatId, 'Please choose your wallet.', {
+        reply_markup: {
+          inline_keyboard: [
+            Object.entries(WALLETS).map(([key, wallet]) => ({
+              text: wallet.name,
+              callback_data: `launch_wallet_${key}`,
+            })),
+          ],
+        },
+      })
+    }
+
+    if (query.data.startsWith('launch_wallet')) {
+      const adapterName = query.data.replace('launch_wallet_', '') as keyof typeof WALLETS
+
+      if (!WALLETS[adapterName]) {
+        bot.sendMessage(chatId, 'Invalid wallet selected.')
+        return
+      }
+
+      formState.resetForm(chatId)
       bot.deleteMessage(chatId, query.message.message_id)
 
       useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {

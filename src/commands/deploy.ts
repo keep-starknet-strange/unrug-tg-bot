@@ -3,6 +3,7 @@ import { dedent } from 'ts-dedent'
 import { deploy } from '../actions/deploy'
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
+import { WALLETS } from '../utils/constants'
 import { deployForm, formState } from '../utils/formState'
 import { DeployValidation, validateAndSend } from '../utils/validation'
 
@@ -93,11 +94,11 @@ bot.on('message', (msg) => {
             [
               {
                 text: 'Cancel',
-                callback_data: `deploy_cancel`,
+                callback_data: `deploy_deploy_cancel`,
               },
               {
                 text: 'Deploy',
-                callback_data: `deploy_confirm`,
+                callback_data: `deploy_deploy_confirm`,
               },
             ],
           ],
@@ -113,40 +114,64 @@ bot.on('callback_query', (query) => {
 
   const form = deployForm.getForm(chatId)
 
-  if (form?.activeForm !== 'deploy' || form.activeField !== 'deploy') return
+  if (form?.activeForm !== 'deploy') return
 
-  if (query.data === 'deploy_cancel') {
-    deployForm.resetForm(chatId)
-    bot.deleteMessage(chatId, query.message.message_id)
-    bot.sendMessage(chatId, 'Deployment cancelled.')
-  }
+  if (form.activeField === 'deploy') {
+    if (query.data === 'deploy_deploy_cancel') {
+      deployForm.resetForm(chatId)
+      bot.deleteMessage(chatId, query.message.message_id)
+      bot.sendMessage(chatId, 'Deployment cancelled.')
+    }
 
-  if (query.data === 'deploy_confirm') {
-    deployForm.resetForm(chatId)
-    bot.deleteMessage(chatId, query.message.message_id)
+    if (query.data === 'deploy_deploy_confirm') {
+      bot.deleteMessage(chatId, query.message.message_id)
 
-    useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {
-      bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
+      bot.sendMessage(chatId, 'Please choose your wallet.', {
+        reply_markup: {
+          inline_keyboard: [
+            Object.entries(WALLETS).map(([key, wallet]) => ({
+              text: wallet.name,
+              callback_data: `deploy_wallet_${key}`,
+            })),
+          ],
+        },
+      })
+    }
 
-      const data = form.values as Required<typeof form.values>
-      const result = await deploy(adapter, accounts[0], data)
+    if (query.data.startsWith('deploy_wallet')) {
+      const adapterName = query.data.replace('deploy_wallet_', '') as keyof typeof WALLETS
 
-      if ('error' in result) {
-        bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
+      if (!WALLETS[adapterName]) {
+        bot.sendMessage(chatId, 'Invalid wallet selected.')
         return
       }
 
-      bot.sendMessage(
-        chatId,
-        dedent`
-          Memecoin deployed.
-          *Address*: \`${result.tokenAddress}\`
-          *Name*: ${data.name}
-          *Symbol*: ${data.symbol}
-          *Owner*: ${data.ownerAddress}
-          *Initial Supply*: ${data.initialSupply}
-        `.trim(),
-      )
-    })
+      formState.resetForm(chatId)
+      bot.deleteMessage(chatId, query.message.message_id)
+
+      useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {
+        bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
+
+        const data = form.values as Required<typeof form.values>
+        const result = await deploy(adapter, accounts[0], data)
+
+        if ('error' in result) {
+          bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
+          return
+        }
+
+        bot.sendMessage(
+          chatId,
+          dedent`
+            Memecoin deployed.
+            *Address*: \`${result.tokenAddress}\`
+            *Name*: ${data.name}
+            *Symbol*: ${data.symbol}
+            *Owner*: ${data.ownerAddress}
+            *Initial Supply*: ${data.initialSupply}
+          `.trim(),
+        )
+      })
+    }
   }
 })

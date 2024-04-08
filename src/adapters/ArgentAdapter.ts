@@ -117,8 +117,7 @@ export class ArgentAdapter extends BaseAdapter {
       }
 
       const qrUrl = `argent://app/wc?uri=${encodeURIComponent(uri)}&device=mobile`
-      // TODO: Replace example.com with the actual URL
-      const buttonUrl = `https://example.com/?wc=${encodeURIComponent(uri)}`
+      const buttonUrl = `https://unruggable.meme/wallet-redirect/${encodeURIComponent(qrUrl)}`
 
       const waitForApproval = async (): Promise<ConnectWaitForApprovalReturnType> => {
         const result = await approval()

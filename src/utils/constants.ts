@@ -1,6 +1,7 @@
 import { getChecksumAddress } from 'starknet'
 
 import { getStartingTick } from './ekubo'
+import { adapters } from '../adapters'
 
 export const MULTICALL_ADDRESS = '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225'
 export const TOKEN_CLASS_HASH = '0x063ee878d3559583ceae80372c6088140e1180d9893aa65fbefc81f45ddaaa17'
@@ -84,5 +85,18 @@ export const AMMs = {
     name: 'StarkDeFi',
     description: "Team allocation will be free but you have to provide liquidity and can't collect fees.",
     launchEntrypoint: Selector.LAUNCH_ON_STARKDEFI,
+  },
+}
+
+// Wallets
+
+export const WALLETS: Record<
+  keyof typeof adapters,
+  {
+    name: string
+  }
+> = {
+  argentMobile: {
+    name: 'Argent Mobile',
   },
 }
