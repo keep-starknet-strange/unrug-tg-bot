@@ -1,5 +1,8 @@
 import { ArgentAdapter } from './ArgentAdapter'
 
-export const adapters = {
-  argentMobile: ArgentAdapter,
+export const Adapters = {
+  argentMobile: {
+    adapter: ArgentAdapter,
+    name: 'Argent Mobile',
+  },
 }

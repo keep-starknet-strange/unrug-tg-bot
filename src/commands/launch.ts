@@ -2,9 +2,10 @@ import dedent from 'ts-dedent'
 
 import { launchOnEkubo, launchOnStandardAMM } from '../actions/launch'
 import { getTokenData, parseTokenData } from '../actions/memecoinData'
+import { Adapters } from '../adapters'
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
-import { AMMs, DECIMALS, WALLETS } from '../utils/constants'
+import { AMMs, DECIMALS } from '../utils/constants'
 import { formState, launchForm } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
 import { LaunchValidation, validateAndSend } from '../utils/validation'
@@ -360,8 +361,8 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(chatId, 'Please choose your wallet.', {
         reply_markup: {
           inline_keyboard: [
-            Object.entries(WALLETS).map(([key, wallet]) => ({
-              text: wallet.name,
+            Object.entries(Adapters).map(([key, adapter]) => ({
+              text: adapter.name,
               callback_data: `launch_wallet_${key}`,
             })),
           ],
@@ -370,9 +371,9 @@ bot.on('callback_query', async (query) => {
     }
 
     if (query.data.startsWith('launch_wallet')) {
-      const adapterName = query.data.replace('launch_wallet_', '') as keyof typeof WALLETS
+      const adapterName = query.data.replace('launch_wallet_', '') as keyof typeof Adapters
 
-      if (!WALLETS[adapterName]) {
+      if (!Adapters[adapterName]) {
         bot.sendMessage(chatId, 'Invalid wallet selected.')
         return
       }
@@ -380,7 +381,7 @@ bot.on('callback_query', async (query) => {
       formState.resetForm(chatId)
       bot.deleteMessage(chatId, query.message.message_id)
 
-      useWallet(chatId, 'argentMobile', async (adapter, accounts): Promise<void> => {
+      useWallet(chatId, adapterName, async (adapter, accounts): Promise<void> => {
         bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
 
         const data = form.values as Required<typeof form.values>

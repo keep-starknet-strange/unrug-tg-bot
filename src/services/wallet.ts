@@ -1,12 +1,12 @@
 import QRCode from 'qrcode'
 import { constants } from 'starknet'
 
-import { adapters } from '../adapters'
+import { Adapters } from '../adapters'
 import { BaseAdapter } from '../adapters/BaseAdapter'
 import { adapterStorage } from '../utils/storage'
 import { bot } from './bot'
 
-export const useWallet = async <TAdaptor extends keyof typeof adapters>(
+export const useWallet = async <TAdaptor extends keyof typeof Adapters>(
   chatId: number,
   adapter: TAdaptor,
   onConnect: (adapter: BaseAdapter, accounts: string[]) => void | Promise<void>,
@@ -20,7 +20,7 @@ export const useWallet = async <TAdaptor extends keyof typeof adapters>(
   }
 
   try {
-    const Adapter = adapters[adapter]
+    const Adapter = Adapters[adapter].adapter
     const newAdapter = new Adapter({ chain: constants.NetworkName.SN_MAIN })
     await newAdapter.init()
 
@@ -59,6 +59,7 @@ export const useWallet = async <TAdaptor extends keyof typeof adapters>(
       },
       {
         filename: 'connect_qr',
+        contentType: 'image/png',
       },
     )
 
@@ -78,6 +79,7 @@ export const useWallet = async <TAdaptor extends keyof typeof adapters>(
           break
       }
 
+      adapterStorage.removeAdapter(chatId)
       bot.deleteMessage(connectMsg.chat.id, connectMsg.message_id)
       return
     }

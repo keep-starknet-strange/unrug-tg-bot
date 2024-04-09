@@ -29,39 +29,47 @@ export class ArgentAdapter extends BaseAdapter {
   public get connected(): boolean {
     if (!this.signClient) return false
 
-    const validSession = this.signClient.session.getAll().find(this.isValidSession.bind(this))
-    if (!validSession) return false
+    const validSession = this.getValidSession()
 
-    this.topic = validSession.topic
-    return true
+    return !!validSession
   }
 
   public get accounts(): string[] {
     if (!this.signClient || !this.connected) return []
 
-    const validSession = this.signClient.session.getAll().find(this.isValidSession.bind(this))
+    const validSession = this.getValidSession()
     if (!validSession) return []
 
-    return validSession.namespaces[this.namespace].accounts
+    return this.getValidAccounts(validSession)
+  }
+
+  protected getValidAccounts(session: SessionTypes.Struct): string[] {
+    // Connected accounts are prefixed with the chain and namespace
+    // Example: "starknet:SNMAIN:0x028446b7625a071bd169022ee8c77c1aad1e13d40994f54b2d84f8cde6aa458d"
+    // Since we're only connecting for a single chain, we can remove the chain prefix
+    return session.namespaces[this.namespace].accounts
       .filter((account) => account.startsWith(`${this.chainNamespace}:`))
       .map((account) => account.replace(`${this.chainNamespace}:`, ''))
   }
 
+  protected getValidSession() {
+    if (!this.signClient) return undefined
+
+    const session = this.signClient.session.getAll().find(this.isValidSession.bind(this))
+
+    if (session) this.topic = session.topic
+    return session
+  }
+
   protected isValidSession(session: SessionTypes.Struct): boolean {
     if (!this.isValidChains(session)) return false
-    if (!this.isValidAccounts(session)) return false
+    if (this.getValidAccounts(session).length === 0) return false
 
     return true
   }
 
   protected isValidChains(session: SessionTypes.Struct): boolean {
     return session.requiredNamespaces?.[this.namespace]?.chains?.includes(this.chainNamespace) ?? false
-  }
-
-  protected isValidAccounts(session: SessionTypes.Struct): boolean {
-    return session.namespaces?.[this.namespace]?.accounts?.some((account) =>
-      account.startsWith(`${this.chainNamespace}:`),
-    )
   }
 
   protected get chainNamespace(): string {
@@ -98,7 +106,7 @@ export class ArgentAdapter extends BaseAdapter {
     try {
       const { uri, approval } = await this.signClient.connect({
         requiredNamespaces: {
-          starknet: {
+          [this.namespace]: {
             events: ['chainChanged', 'accountsChanged'],
             methods: [
               `${this.namespace}_supportedSpecs`,
@@ -122,12 +130,7 @@ export class ArgentAdapter extends BaseAdapter {
       const waitForApproval = async (): Promise<ConnectWaitForApprovalReturnType> => {
         const result = await approval()
 
-        // Connected accounts are prefixed with the chain and namespace
-        // Example: "starknet:SNMAIN:0x028446b7625a071bd169022ee8c77c1aad1e13d40994f54b2d84f8cde6aa458d"
-        // Since we're only connecting for a single chain, we can remove the chain prefix
-        const connectedAccounts = result.namespaces[this.namespace].accounts
-          .filter((account) => account.startsWith(`${this.chainNamespace}:`))
-          .map((account: string) => account.replace(`${this.chainNamespace}:`, ''))
+        const connectedAccounts = this.getValidAccounts(result)
 
         if (connectedAccounts.length === 0) {
           return {
@@ -180,9 +183,7 @@ export class ArgentAdapter extends BaseAdapter {
       throw new Error('Adapter not initialized')
     }
 
-    if (!this.topic) {
-      throw new Error('Adapter not connected to a topic')
-    }
+    if (!this.topic) return { error: 'unknown_error' }
 
     try {
       await this.signClient.disconnect({

@@ -1,7 +1,7 @@
 import { z, ZodSchema } from 'zod'
 
 import { bot } from '../services/bot'
-import { isValidL2Address } from './address'
+import { isValidStarknetAddress } from './helpers'
 
 const int = <TSchema extends ZodSchema>(schema: TSchema) => z.preprocess((x) => String(x).replace(/[.,]/g, ''), schema)
 
@@ -31,7 +31,7 @@ export const addressValidation = z
     invalid_type_error: 'Please provide a valid *Address*.',
     required_error: 'Please provide a valid *Address*.',
   })
-  .refine((value) => isValidL2Address(value), 'Please provide a valid Starknet address.')
+  .refine((value) => isValidStarknetAddress(value), 'Please provide a valid Starknet address.')
 
 export const DeployValidation = {
   name: z
