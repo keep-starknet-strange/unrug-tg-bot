@@ -70,14 +70,14 @@ export class ArgentAdapter extends BaseAdapter {
   }
 
   public async init(): Promise<void> {
-    if (!Bun.env.WC_PROJECT_ID) {
+    if (!process.env.WC_PROJECT_ID) {
       throw new Error(
         'WC_PROJECT_ID env variable is not provided. You can get one from https://cloud.walletconnect.com',
       )
     }
 
     this.signClient = await SignClient.init({
-      projectId: Bun.env.WC_PROJECT_ID,
+      projectId: process.env.WC_PROJECT_ID,
       metadata: {
         name: 'Unruggable Meme',
         description: 'Unruggable Meme Telegram Bot',

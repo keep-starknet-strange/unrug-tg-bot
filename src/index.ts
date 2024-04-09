@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import { bot } from './services/bot'
 
 console.log('Bot is running...')
