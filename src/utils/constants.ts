@@ -1,11 +1,4 @@
 import { getChecksumAddress } from 'starknet'
-import { getStartingTick } from './ekubo'
-
-export enum LiquidityType {
-  JEDISWAP_ERC20 = 'JEDISWAP_ERC20',
-  STARKDEFI_ERC20 = 'STARKDEFI_ERC20',
-  EKUBO_NFT = 'EKUBO_NFT',
-}
 
 export const MULTICALL_ADDRESS = '0x01a33330996310a1e3fa1df5b16c1e07f0491fdd20c441126e02613b948f0225'
 export const FACTORY_ADDRESS = '0x01a46467a9246f45c8c340f1f155266a26a71c07bd55d36e8d1c7d0d438a2dbc'
@@ -51,7 +44,7 @@ const Ether = {
 }
 
 export const QUOTE_TOKENS = {
-  [getChecksumAddress(ETH_ADDRESS)]: Ether
+  [getChecksumAddress(ETH_ADDRESS)]: Ether,
 }
 
 export const DECIMALS = 18
