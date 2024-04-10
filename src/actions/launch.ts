@@ -2,6 +2,7 @@ import { Fraction, Percent } from '@uniswap/sdk-core'
 import { CallData, uint256 } from 'starknet'
 
 import { BaseAdapter } from '../adapters/BaseAdapter'
+import type { LaunchForm } from '../forms/launch'
 import {
   AMMs,
   DECIMALS,
@@ -15,14 +16,13 @@ import {
   STARKNET_MAX_BLOCK_TIME,
 } from '../utils/constants'
 import { getStartingTick } from '../utils/ekubo'
-import { launchForm } from '../utils/formState'
 import { decimalsScale, parsePercentage } from '../utils/helpers'
 import { getEtherPrice } from '../utils/price'
 import { getMemecoin } from './memecoinData'
 
-type FormData = Required<NonNullable<ReturnType<typeof launchForm.getForm>>['values']>
+type LaunchFormData = { [K in keyof LaunchForm]: NonNullable<LaunchForm[K]> }
 
-export async function launchOnEkubo(adapter: BaseAdapter, account: string, data: FormData) {
+export async function launchOnEkubo(adapter: BaseAdapter, account: string, data: LaunchFormData) {
   const memecoin = await getMemecoin(data.address)
   if (!memecoin) {
     return {
@@ -33,7 +33,7 @@ export async function launchOnEkubo(adapter: BaseAdapter, account: string, data:
   const quoteTokenPrice = await getEtherPrice()
   const quoteTokenAddress = ETH_ADDRESS
 
-  const teamAllocationFraction = data.teamAllocation.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
+  const teamAllocationFraction = data.teamAllocations.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
   const teamAllocationPercentage = new Percent(
     teamAllocationFraction.quotient,
     new Fraction(memecoin?.totalSupply, decimalsScale(DECIMALS)).quotient,
@@ -63,14 +63,14 @@ export async function launchOnEkubo(adapter: BaseAdapter, account: string, data:
     uin256TeamAllocationQuoteAmount, // amount
   ])
 
-  const initialHolders = data.teamAllocation.map(({ holderAddress }) => holderAddress)
-  const initialHoldersAmounts = data.teamAllocation.map(({ amount }) =>
+  const initialHolders = data.teamAllocations.map(({ address }) => address)
+  const initialHoldersAmounts = data.teamAllocations.map(({ amount }) =>
     uint256.bnToUint256(BigInt(amount) * BigInt(decimalsScale(DECIMALS))),
   )
 
   const launchCalldata = CallData.compile([
     data.address, // memecoin address
-    data.disableAntibotAfter * 60, // anti bot period in seconds
+    data.antiBotPeriod * 60, // anti bot period in seconds
     data.holdLimit * 100, // hold limit
     quoteTokenAddress, // quote token address
     initialHolders, // initial holders
@@ -102,7 +102,7 @@ export async function launchOnEkubo(adapter: BaseAdapter, account: string, data:
   return result
 }
 
-export async function launchOnStandardAMM(adapter: BaseAdapter, account: string, data: FormData) {
+export async function launchOnStandardAMM(adapter: BaseAdapter, account: string, data: LaunchFormData) {
   const memecoin = await getMemecoin(data.address)
   if (!memecoin) {
     return {
@@ -113,7 +113,7 @@ export async function launchOnStandardAMM(adapter: BaseAdapter, account: string,
   const quoteTokenPrice = await getEtherPrice()
   const quoteTokenAddress = ETH_ADDRESS
 
-  const teamAllocationFraction = data.teamAllocation.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
+  const teamAllocationFraction = data.teamAllocations.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
   const teamAllocationPercentage = new Percent(
     teamAllocationFraction.quotient,
     new Fraction(memecoin?.totalSupply, decimalsScale(DECIMALS)).quotient,
@@ -124,8 +124,8 @@ export async function launchOnStandardAMM(adapter: BaseAdapter, account: string,
     .multiply(new Fraction(1).subtract(teamAllocationPercentage))
   const uin256QuoteAmount = uint256.bnToUint256(BigInt(quoteAmount.multiply(decimalsScale(18)).quotient.toString()))
 
-  const initialHolders = data.teamAllocation.map(({ holderAddress }) => holderAddress)
-  const initialHoldersAmounts = data.teamAllocation.map(({ amount }) =>
+  const initialHolders = data.teamAllocations.map(({ address }) => address)
+  const initialHoldersAmounts = data.teamAllocations.map(({ amount }) =>
     uint256.bnToUint256(BigInt(amount) * BigInt(decimalsScale(DECIMALS))),
   )
 
@@ -143,7 +143,7 @@ export async function launchOnStandardAMM(adapter: BaseAdapter, account: string,
 
   const launchCalldata = CallData.compile([
     data.address, // memecoin address
-    data.disableAntibotAfter * 60, // anti bot period in seconds
+    data.antiBotPeriod * 60, // anti bot period in seconds
     data.holdLimit * 100, // hodl limit
     quoteTokenAddress, // quote token
     initialHolders, // initial holders

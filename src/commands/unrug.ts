@@ -2,14 +2,14 @@ import { Percent } from '@uniswap/sdk-core'
 
 import { getMemecoin } from '../actions/memecoinData'
 import { bot } from '../services/bot'
-import { formState } from '../utils/formState'
+import { Forms } from '../utils/form'
 import { isValidStarknetAddress } from '../utils/helpers'
 import { parseLiquidityParams } from '../utils/liquidity'
 import { formatPercentage } from '../utils/price'
 
 // Matches "/unrug [token_address]"
 bot.onText(/\/unrug (.+)/, (msg, match) => {
-  formState.resetForm(msg.chat.id)
+  Forms.resetForm(msg.chat.id)
 
   if (!match?.[1]) {
     bot.sendMessage(msg.chat.id, 'Usage: /unrug [token_address]')

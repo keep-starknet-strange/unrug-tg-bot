@@ -1,10 +1,10 @@
 import dedent from 'ts-dedent'
 
 import { bot } from '../services/bot'
-import { formState } from '../utils/formState'
+import { Forms } from '../utils/form'
 
 bot.onText(/\/start/, async (msg): Promise<void> => {
-  formState.resetForm(msg.chat.id)
+  Forms.resetForm(msg.chat.id)
 
   await bot.sendMessage(
     msg.chat.id,

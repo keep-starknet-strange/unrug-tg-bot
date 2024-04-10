@@ -63,7 +63,7 @@ export const LaunchValidation = {
 
   holdLimit: number.min(0.5, '*Hold limit* cannot fall behind 0.5%').max(100, '*Hold limit* cannot exceed 100%'),
 
-  disableAfter: z
+  antiBotPeriod: z
     .string()
     .regex(/^(24:00)|(([01]\d|2[0-3]):([0-5]\d))$/, 'Please provide a time in HH:MM format. Example: 24:00'),
 

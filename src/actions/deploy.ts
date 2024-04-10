@@ -1,15 +1,13 @@
 import { CallData, hash, stark, uint256 } from 'starknet'
 
 import { BaseAdapter } from '../adapters/BaseAdapter'
+import type { DeployForm } from '../forms/deploy'
 import { DECIMALS, FACTORY_ADDRESS, Selector, TOKEN_CLASS_HASH } from '../utils/constants'
-import { deployForm } from '../utils/formState'
 import { decimalsScale } from '../utils/helpers'
 
-export async function deploy(
-  adapter: BaseAdapter,
-  account: string,
-  data: Required<NonNullable<ReturnType<typeof deployForm.getForm>>['values']>,
-) {
+type DeployFormData = { [K in keyof DeployForm]: NonNullable<DeployForm[K]> }
+
+export async function deploy(adapter: BaseAdapter, account: string, data: DeployFormData) {
   const salt = stark.randomAddress()
 
   const constructorCalldata = CallData.compile([
