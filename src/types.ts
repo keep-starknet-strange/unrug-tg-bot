@@ -4,7 +4,7 @@ export enum LiquidityType {
   EKUBO_NFT = 'EKUBO_NFT',
 }
 
-export interface i129 {
+interface i129 {
   mag: string
   sign: string
 }
