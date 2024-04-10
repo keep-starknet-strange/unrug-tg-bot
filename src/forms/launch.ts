@@ -1,4 +1,4 @@
-import dedent from 'ts-dedent'
+import { dedent } from 'ts-dedent'
 
 import { launchOnEkubo, launchOnStandardAMM } from '../actions/launch'
 import { getMemecoin } from '../actions/memecoinData'

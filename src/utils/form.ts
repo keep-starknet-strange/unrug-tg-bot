@@ -6,12 +6,12 @@ import { validateAndSend } from './validation'
 
 const FORM_CHOICE_PREFIX = 'form_choice'
 
-type Form = ReturnType<typeof createForm>
+type Form = ReturnType<typeof createForm<any>>
 
 export const Forms = new (class Forms {
   forms: Record<number, Form> = {}
 
-  getForm(chatId: number) {
+  getForm(chatId: number): Form {
     return this.forms[chatId]
   }
 
@@ -73,14 +73,16 @@ export function createForm<TFields extends Record<string, Field<any, any>>>(chat
     }
 
     if (fieldData.type === 'choice' && fieldData.choices) {
+      const keyboard = [
+        fieldData.choices.map(({ key, title }) => ({
+          text: title,
+          callback_data: `${FORM_CHOICE_PREFIX}_${String(field)}_${key}`,
+        })),
+      ]
+
       bot.sendMessage(chatId, message ?? '', {
         reply_markup: {
-          inline_keyboard: [
-            fieldData.choices.map(({ key, title }) => ({
-              text: title,
-              callback_data: `${FORM_CHOICE_PREFIX}_${String(field)}_${key}`,
-            })),
-          ],
+          inline_keyboard: keyboard,
         },
         parse_mode: 'Markdown',
       })
@@ -107,9 +109,12 @@ bot.on('message', (msg) => {
   if (!msg.text || msg.text.startsWith('/')) return
 
   const form = Forms.getForm(msg.chat.id)
-  if (!form || !form.activeField || !form.fields[form.activeField]) return
+  if (!form) return
 
-  const field = form.fields[form.activeField] as Field<any, any>
+  const activeField = form.getActiveField()
+  if (!activeField || !form.fields[activeField]) return
+
+  const field = form.fields[activeField] as Field<any, any>
   if (field.type !== 'text') return
 
   let value: string | false = msg.text
@@ -129,14 +134,16 @@ bot.on('callback_query', (query) => {
   const chatId = query.message.chat.id
 
   const form = Forms.getForm(chatId)
+  if (!form) return
 
-  if (!form || !form.activeField || !form.fields[form.activeField]) return
+  const activeField = form.getActiveField()
+  if (!activeField || !form.fields[activeField]) return
 
-  const field = form.fields[form.activeField] as Field<any, any>
-  if (field.type !== 'choice' || !query.data.startsWith(`${FORM_CHOICE_PREFIX}_${form.activeField}_`)) return
+  const field = form.fields[activeField] as Field<any, any>
+  if (field.type !== 'choice' || !query.data.startsWith(`${FORM_CHOICE_PREFIX}_${String(activeField)}_`)) return
 
   field.handler({
     query,
-    value: query.data.replace(`${FORM_CHOICE_PREFIX}_${form.activeField}_`, ''),
+    value: query.data.replace(`${FORM_CHOICE_PREFIX}_${String(activeField)}_`, ''),
   })
 })

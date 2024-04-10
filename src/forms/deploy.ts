@@ -1,4 +1,4 @@
-import dedent from 'ts-dedent'
+import { dedent } from 'ts-dedent'
 
 import { deploy } from '../actions/deploy'
 import { Adapters } from '../adapters'
@@ -72,7 +72,7 @@ export const createDeployForm = (chatId: number) => {
         },
         {
           key: 'deploy',
-          title: 'deploy',
+          title: 'Deploy',
         },
       ],
       handler: ({ value, query }) => {

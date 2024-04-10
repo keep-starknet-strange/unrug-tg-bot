@@ -1,4 +1,4 @@
-import dedent from 'ts-dedent'
+import { dedent } from 'ts-dedent'
 
 import { bot } from '../services/bot'
 import { Forms } from '../utils/form'
