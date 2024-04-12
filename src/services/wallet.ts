@@ -6,9 +6,10 @@ import { BaseAdapter } from '../adapters/BaseAdapter'
 import { adapterStorage } from '../utils/storage'
 import { bot } from './bot'
 
-export const useWallet = async <TAdaptor extends keyof typeof Adapters>(
+const callbacks: Record<number, (adapter: BaseAdapter, accounts: string[]) => void | Promise<void> | undefined> = {}
+
+export const useWallet = async (
   chatId: number,
-  adapter: TAdaptor,
   onConnect: (adapter: BaseAdapter, accounts: string[]) => void | Promise<void>,
 ): Promise<void> => {
   if (!chatId) return
@@ -19,21 +20,71 @@ export const useWallet = async <TAdaptor extends keyof typeof Adapters>(
     return
   }
 
+  callbacks[chatId] = onConnect
+
+  bot.sendMessage(chatId, 'Please choose your wallet', {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'Cancel',
+            callback_data: 'cancel',
+          },
+        ],
+        ...Object.entries(Adapters).map(([key, adapter]) => [
+          {
+            text: adapter.name,
+            callback_data: key,
+          },
+        ]),
+      ],
+    },
+  })
+}
+
+bot.on('callback_query', async (query) => {
+  if (!query.message || !query.data) return
+
+  const chatId = query.message.chat.id
+  const onConnect = callbacks[chatId]
+
+  if (!onConnect) return
+
+  if (!query.data || !['cancel', Object.keys(Adapters)].includes(query.data)) {
+    bot.sendMessage(chatId, 'Invalid wallet selected. Please try again.')
+    return
+  }
+
+  bot.deleteMessage(chatId, query.message.message_id)
+  delete callbacks[chatId]
+
+  if (query.data === 'cancel') {
+    bot.sendMessage(chatId, 'Connection cancelled.')
+    return
+  }
+
+  const adapter = query.data as keyof typeof Adapters
+
   try {
     const Adapter = Adapters[adapter].adapter
-    const newAdapter = new Adapter({ chain: constants.NetworkName.SN_MAIN })
+    const newAdapter = new Adapter({ chain: constants.NetworkName.SN_MAIN, chatId })
     await newAdapter.init()
+
+    adapterStorage.addAdapter(chatId, newAdapter)
 
     newAdapter.onDisconnect(() => {
       adapterStorage.removeAdapter(chatId)
     })
 
-    adapterStorage.addAdapter(chatId, newAdapter)
-
     const connectResult = await newAdapter.connect()
     if ('error' in connectResult) {
       adapterStorage.removeAdapter(chatId)
       // No need to send a message here, this error is only can be user rejected or timeout
+      return
+    }
+
+    if ('skipConnection' in connectResult) {
+      onConnect(newAdapter, newAdapter.accounts)
       return
     }
 
@@ -92,4 +143,4 @@ export const useWallet = async <TAdaptor extends keyof typeof Adapters>(
   } catch (e) {
     bot.sendMessage(chatId, 'Failed to connect to wallet')
   }
-}
+})

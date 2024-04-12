@@ -2,7 +2,6 @@ import { dedent } from 'ts-dedent'
 
 import { launchOnEkubo, launchOnStandardAMM } from '../actions/launch'
 import { getMemecoin } from '../actions/memecoinData'
-import { Adapters } from '../adapters'
 import { bot } from '../services/bot'
 import { useWallet } from '../services/wallet'
 import { AMMs, DECIMALS } from '../utils/constants'
@@ -257,71 +256,41 @@ export const createLaunchForm = (chatId: number) => {
         { key: 'confirm', title: 'Launch' },
       ],
       handler: ({ value, query }) => {
-        // query.message can't be null since form already checks for it. Re-checking for type safety.
         if (!query.message) return
         bot.deleteMessage(chatId, query.message.message_id)
-
-        if (value === 'cancel') {
-          bot.sendMessage(chatId, 'Launch cancelled and all data has been discarded.')
-          Forms.resetForm(chatId)
-          return
-        }
-
-        form.setActiveField('wallet')
-      },
-    }),
-
-    wallet: defineField({
-      type: 'choice',
-      value: undefined,
-      message: () => `Please choose your wallet.`,
-      choices: [
-        {
-          key: 'cancel',
-          title: 'Cancel',
-        },
-        ...Object.entries(Adapters).map(([key, adapter]) => ({
-          key,
-          title: adapter.name,
-        })),
-      ],
-      handler: ({ value, query }) => {
-        // query.message can't be null since form already checks for it. Re-checking for type safety.
-        if (!query.message) return
-        bot.deleteMessage(chatId, query.message.message_id)
-
-        if (value === 'cancel') {
-          Forms.resetForm(chatId)
-          bot.sendMessage(chatId, 'Launch cancelled and all data has been discarded.')
-          return
-        }
-
-        const adapterName = value as keyof typeof Adapters
-        if (!Adapters[adapterName]) {
-          bot.sendMessage(chatId, 'Invalid wallet selected.')
-          return
-        }
 
         Forms.resetForm(chatId)
 
-        useWallet(chatId, adapterName, async (adapter, accounts): Promise<void> => {
-          bot.sendMessage(chatId, `Please approve the transaction in your wallet.`)
+        if (value === 'cancel') {
+          bot.sendMessage(chatId, 'Launch cancelled and all data has been discarded.')
+          return
+        }
 
+        useWallet(chatId, async (adapter, accounts): Promise<void> => {
           const data = form.getValues()
 
           let result
           if (data.amm === 'ekubo') result = await launchOnEkubo(adapter, accounts[0], data as any)
           else result = await launchOnStandardAMM(adapter, accounts[0], data as any)
 
+          let actionNeeded = false
           if ('error' in result) {
-            bot.sendMessage(chatId, `There was an error deploying the memecoin. Please try again.`)
-            return
+            if (result.error === 'action_needed') {
+              actionNeeded = true
+            } else {
+              bot.sendMessage(chatId, `There was an error deploying the meme coin. Please try again.`)
+              return
+            }
           }
 
           bot.sendMessage(
             chatId,
             dedent`
-              Memecoin launched.
+            ${
+              actionNeeded
+                ? 'The launch has been initiated. Please sign the transaction in your wallet.'
+                : 'Memecoin launched.'
+            }
               ${getLaunchInfoMessage(data)}
             `.trim(),
             { parse_mode: 'Markdown' },

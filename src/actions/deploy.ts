@@ -38,7 +38,5 @@ export async function deploy(adapter: BaseAdapter, account: string, data: Deploy
     },
   })
 
-  if ('error' in result) return result
-
-  return { tokenAddress, result: result.result }
+  return { tokenAddress, result }
 }

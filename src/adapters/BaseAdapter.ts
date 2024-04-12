@@ -1,10 +1,11 @@
-import { constants } from 'starknet'
+import { CallDetails, constants } from 'starknet'
 
 export type BaseAdapterConstructorOptions = {
   chain: constants.NetworkName
+  chatId: number
 }
 
-export type ConnectError = 'user_rejected' | 'no_accounts_connected' | 'wrong_chain' | 'timeout' | 'unknown_error'
+type ConnectError = 'user_rejected' | 'no_accounts_connected' | 'wrong_chain' | 'timeout' | 'unknown_error'
 
 export type ConnectWaitForApprovalReturnType =
   | { error: ConnectError }
@@ -23,6 +24,7 @@ export type ConnectWaitForApprovalReturnType =
 
 export type ConnectReturnType =
   | { error: ConnectError }
+  | { skipConnection: boolean }
   | {
       qrUrl: string
       buttonUrl: string
@@ -40,13 +42,28 @@ export type RequestParams = {
   params: any
 }
 
-export type RequestReturnType = { error: 'unknown_error' } | { result: unknown }
+export type InvokeTransactionParams = {
+  accountAddress: string
+  executionRequest: {
+    calls: CallDetails[]
+  }
+}
+
+export type RequestReturnType = { error: 'unknown_error' | 'action_needed' } | { result: unknown }
 
 export type OnDisconnectType = {
   topic: string
 }
 
 export abstract class BaseAdapter {
+  public chain: constants.NetworkName
+  public chatId: number
+
+  constructor(options: BaseAdapterConstructorOptions) {
+    this.chain = options.chain
+    this.chatId = options.chatId
+  }
+
   public abstract get connected(): boolean
 
   public abstract get accounts(): string[]
@@ -57,7 +74,7 @@ export abstract class BaseAdapter {
   public abstract disconnect(): Promise<DisconnectReturnType>
 
   public abstract request(params: RequestParams): Promise<RequestReturnType>
-  public abstract invokeTransaction(params: object): Promise<RequestReturnType>
+  public abstract invokeTransaction(params: InvokeTransactionParams): Promise<RequestReturnType>
 
   public abstract onDisconnect(onDisconnect: (data: OnDisconnectType) => void): void
 }

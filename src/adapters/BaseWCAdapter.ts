@@ -1,6 +1,5 @@
 import { SignClient } from '@walletconnect/sign-client'
 import type { SessionTypes } from '@walletconnect/types'
-import { constants } from 'starknet'
 
 import {
   BaseAdapter,
@@ -8,6 +7,7 @@ import {
   ConnectReturnType,
   ConnectWaitForApprovalReturnType,
   DisconnectReturnType,
+  InvokeTransactionParams,
   OnDisconnectType,
   RequestParams,
   RequestReturnType,
@@ -20,13 +20,10 @@ export abstract class BaseWCAdapter extends BaseAdapter {
   public signClient: Awaited<ReturnType<(typeof SignClient)['init']>> | undefined
   public topic: string | undefined
 
-  public chain: constants.NetworkName
   public namespace = 'starknet'
 
   public constructor(options: BaseAdapterConstructorOptions) {
-    super()
-
-    this.chain = options.chain
+    super(options)
   }
 
   public get connected(): boolean {
@@ -236,7 +233,7 @@ export abstract class BaseWCAdapter extends BaseAdapter {
     }
   }
 
-  public async invokeTransaction(params: object): Promise<RequestReturnType> {
+  public async invokeTransaction(params: InvokeTransactionParams): Promise<RequestReturnType> {
     return this.request({
       method: `${this.namespace}_requestAddInvokeTransaction`,
       params,

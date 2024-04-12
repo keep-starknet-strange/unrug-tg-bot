@@ -19,7 +19,7 @@ export const Forms = new (class Forms {
     delete this.forms[chatId]
   }
 
-  setForm(chatId: number, form: Form) {
+  setForm(chatId: number, form: any) {
     this.forms[chatId] = form
   }
 })()

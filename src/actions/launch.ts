@@ -36,7 +36,7 @@ export async function launchOnEkubo(adapter: BaseAdapter, account: string, data:
   const teamAllocationFraction = data.teamAllocations.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
   const teamAllocationPercentage = new Percent(
     teamAllocationFraction.quotient,
-    new Fraction(memecoin?.totalSupply, decimalsScale(DECIMALS)).quotient,
+    new Fraction(memecoin.totalSupply, decimalsScale(DECIMALS)).quotient,
   )
   const teamAllocationQuoteAmount = new Fraction(data.startingMarketCap)
     .divide(quoteTokenPrice)
@@ -116,7 +116,7 @@ export async function launchOnStandardAMM(adapter: BaseAdapter, account: string,
   const teamAllocationFraction = data.teamAllocations.reduce((acc, { amount }) => acc.add(amount), new Fraction(0))
   const teamAllocationPercentage = new Percent(
     teamAllocationFraction.quotient,
-    new Fraction(memecoin?.totalSupply, decimalsScale(DECIMALS)).quotient,
+    new Fraction(memecoin.totalSupply, decimalsScale(DECIMALS)).quotient,
   )
 
   const quoteAmount = new Fraction(data.startingMarketCap)
