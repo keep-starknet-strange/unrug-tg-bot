@@ -1,10 +1,14 @@
 import { createDeployForm } from '../forms/deploy'
-import { bot } from '../services/bot'
+import { bot, botInfo } from '../services/bot'
 import { Forms } from '../utils/form'
 
-bot.onText(/\/deploy/, async (msg): Promise<void> => {
+bot.onText(/^\/deploy/, async (msg): Promise<void> => {
   if (msg.chat.type !== 'private') {
-    bot.sendMessage(msg.chat.id, 'This command can only be used in a private chat.')
+    bot.sendMessage(msg.chat.id, 'This command can only be used in a private chat.', {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Send a private message', url: `https://t.me/${botInfo.username}` }]],
+      },
+    })
     return
   }
 

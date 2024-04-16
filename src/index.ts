@@ -1,8 +1,8 @@
+/* eslint-disable simple-import-sort/imports */
+
 import 'dotenv/config'
 
-import { bot } from './services/bot'
-
-console.log('Bot is running...')
+import { bot, botInfo } from './services/bot'
 
 // ************ COMMANDS ************
 
@@ -33,6 +33,14 @@ const launch = {
   description: 'Launches a deployed meme coin.',
 }
 
-bot.setMyCommands([start, unrug], { scope: { type: 'default' } })
+;(async () => {
+  await bot.setMyCommands([start, unrug], { scope: { type: 'default' } })
+  await bot.setMyCommands([start, unrug, deploy, launch], { scope: { type: 'all_private_chats' } })
 
-bot.setMyCommands([start, unrug, deploy, launch], { scope: { type: 'all_private_chats' } })
+  const me = await bot.getMe()
+
+  botInfo.id = me.id
+  botInfo.username = me.username ?? ''
+
+  console.log('Bot is running...')
+})()

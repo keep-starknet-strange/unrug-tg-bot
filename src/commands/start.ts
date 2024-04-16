@@ -3,7 +3,7 @@ import { dedent } from 'ts-dedent'
 import { bot } from '../services/bot'
 import { Forms } from '../utils/form'
 
-bot.onText(/\/start/, async (msg): Promise<void> => {
+bot.onText(/^\/start/, async (msg): Promise<void> => {
   Forms.resetForm(msg.chat.id)
 
   await bot.sendMessage(

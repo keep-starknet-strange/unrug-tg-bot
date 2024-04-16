@@ -174,10 +174,7 @@ export const createLaunchForm = (chatId: number) => {
         form.setValue('teamAllocationAddress', undefined)
 
         if (newTeamAllocations.length === 10) {
-          bot.sendMessage(
-            chatId,
-            'Maximum of 10 team allocations reached. Please continue to the form.setActiveField steps.',
-          )
+          bot.sendMessage(chatId, 'Maximum of 10 team allocations reached. Please continue to the next steps.')
           form.setActiveField('holdLimit')
           return
         }

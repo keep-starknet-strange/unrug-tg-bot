@@ -8,7 +8,7 @@ import { parseLiquidityParams } from '../utils/liquidity'
 import { formatPercentage } from '../utils/price'
 
 // Matches "/unrug [token_address]"
-bot.onText(/\/unrug (.+)/, (msg, match) => {
+bot.onText(/^\/unrug (.+)/, (msg, match) => {
   Forms.resetForm(msg.chat.id)
 
   if (!match?.[1]) {
