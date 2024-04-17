@@ -1,15 +1,20 @@
 import { Percent } from '@uniswap/sdk-core'
 
+import { getMemecoin } from '../actions/memecoinData'
 import { bot } from '../services/bot'
+import { Forms } from '../utils/form'
 import { isValidStarknetAddress } from '../utils/helpers'
 import { parseLiquidityParams } from '../utils/liquidity'
-import { getTokenData, parseTokenData } from '../utils/memecoinData'
 import { formatPercentage } from '../utils/price'
 
 // Matches "/unrug [token_address]"
-bot.onText(/\/unrug (.+)/, (msg, match) => {
-  // TODO: add usage
-  if (!match?.[1]) return
+bot.onText(/^\/unrug (.+)/, (msg, match) => {
+  Forms.resetForm(msg.chat.id)
+
+  if (!match?.[1]) {
+    bot.sendMessage(msg.chat.id, 'Usage: /unrug [token_address]')
+    return
+  }
 
   // 'msg' is the received Message from Telegram
   // 'match' is the result of executing the regexp above on the text content
@@ -34,8 +39,7 @@ async function computeResponse(chatId: number, tokenAddress: string): Promise<st
     bot.sendMessage(chatId, 'Loading...')
 
     try {
-      const rawMemecoin = await getTokenData(tokenAddress)
-      const memecoin = await parseTokenData(tokenAddress, rawMemecoin)
+      const memecoin = await getMemecoin(tokenAddress)
 
       if (!memecoin) {
         return 'This token is Ruggable ❌'

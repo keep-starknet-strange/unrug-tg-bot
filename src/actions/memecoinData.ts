@@ -2,8 +2,8 @@ import { CallContractResponse, CallData, getChecksumAddress, hash, shortString, 
 
 import { provider } from '../services/provider'
 import { LiquidityType, Memecoin } from '../types'
-import { FACTORY_ADDRESS, MULTICALL_ADDRESS, Selector } from './constants'
-import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from './liquidity'
+import { FACTORY_ADDRESS, MULTICALL_ADDRESS, Selector } from '../utils/constants'
+import { getEkuboLiquidityLockPosition, getJediswapLiquidityLockPosition } from '../utils/liquidity'
 
 export async function getTokenData(tokenAddress: string) {
   const isMemecoinCalldata = CallData.compile({
@@ -158,4 +158,8 @@ export async function parseTokenData(tokenAddress: string, res: CallContractResp
   } else {
     return { ...baseMemecoin, isLaunched: false }
   }
+}
+
+export async function getMemecoin(tokenAddress: string): Promise<Memecoin | null> {
+  return parseTokenData(tokenAddress, await getTokenData(tokenAddress))
 }

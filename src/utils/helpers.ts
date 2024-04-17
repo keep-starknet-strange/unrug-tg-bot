@@ -1,3 +1,7 @@
+import { Percent } from '@uniswap/sdk-core'
+
+import { PERCENTAGE_INPUT_PRECISION } from './constants'
+
 /**
  * Checks if a given string is a valid StarkNet address.
  *
@@ -12,3 +16,6 @@ export function isValidStarknetAddress(address: string): boolean {
 }
 
 export const decimalsScale = (decimals: number) => `1${Array(decimals).fill('0').join('')}`
+
+export const parsePercentage = (percentage: string | number) =>
+  new Percent(+percentage * 10 ** PERCENTAGE_INPUT_PRECISION, 100 * 10 ** PERCENTAGE_INPUT_PRECISION)

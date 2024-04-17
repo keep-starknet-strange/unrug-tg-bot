@@ -1,7 +1,7 @@
 import { RpcProvider } from 'starknet'
 
-// replace the value below with the Telegram token you receive from @BotFather
-const nodeUrl = Bun.env.NODE_URL
+// replace the value below with your starknet node url
+const nodeUrl = process.env.NODE_URL
 
 // Exit if the node url is not provided
 if (!nodeUrl) {
