@@ -125,7 +125,7 @@ bot.on('message', (msg) => {
 
   field.handler({
     msg,
-    value: msg.text,
+    value,
   })
 })
 

@@ -30,7 +30,7 @@ const getLaunchInfoMessage = (data: LaunchForm): string => {
   if (data.amm === 'ekubo') message += `*Ekubo Fees*: ${data.ekuboFees}%\n`
 
   message += '*Liquidity Lock*: '
-  if (!data.lockLiquidity === undefined || data.lockLiquidity === Infinity) message += 'Forever\n'
+  if (data.lockLiquidity === undefined || data.lockLiquidity === Infinity) message += 'Forever\n'
   else message += `${data.lockLiquidity} months\n`
 
   return message.trim()

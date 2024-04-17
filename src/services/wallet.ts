@@ -28,13 +28,13 @@ export const useWallet = async (
         [
           {
             text: 'Cancel',
-            callback_data: 'cancel',
+            callback_data: 'wallet_cancel',
           },
         ],
         ...Object.entries(Adapters).map(([key, adapter]) => [
           {
             text: adapter.name,
-            callback_data: key,
+            callback_data: `wallet_${key}`,
           },
         ]),
       ],
@@ -48,9 +48,11 @@ bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id
   const onConnect = callbacks[chatId]
 
-  if (!onConnect) return
+  if (!onConnect || !query.data || !query.data.startsWith('wallet_')) return
 
-  if (!query.data || !['cancel', Object.keys(Adapters)].includes(query.data)) {
+  const data = query.data?.replace('wallet_', '')
+
+  if (!['cancel', ...Object.keys(Adapters)].includes(data)) {
     bot.sendMessage(chatId, 'Invalid wallet selected. Please try again.')
     return
   }
@@ -58,12 +60,12 @@ bot.on('callback_query', async (query) => {
   bot.deleteMessage(chatId, query.message.message_id)
   delete callbacks[chatId]
 
-  if (query.data === 'cancel') {
+  if (data === 'cancel') {
     bot.sendMessage(chatId, 'Connection cancelled.')
     return
   }
 
-  const adapter = query.data as keyof typeof Adapters
+  const adapter = data as keyof typeof Adapters
 
   try {
     const Adapter = Adapters[adapter].adapter
@@ -115,6 +117,7 @@ bot.on('callback_query', async (query) => {
     )
 
     const result = await waitForApproval()
+
     if ('error' in result) {
       switch (result.error) {
         case 'no_accounts_connected':
